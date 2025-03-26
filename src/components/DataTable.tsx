@@ -70,7 +70,7 @@ interface RowData {
 
 export function DataTable() {
   const [rowData, setRowData] = useState<RowData[]>([]);
-  const { currentTheme, isDarkMode, spacing, fontSize } = useTheme();
+  const { currentTheme, isDarkMode, spacing, fontSize, fontFamily, accentColor } = useTheme();
   const gridRef = useRef<AgGridReact<RowData>>(null);
   const gridApiRef = useRef<GridApi | null>(null);
   
@@ -135,7 +135,7 @@ export function DataTable() {
   useEffect(() => {
     // Apply non-spacing theme changes
     applyTheme();
-  }, [currentTheme.theme, fontSize, isDarkMode]);
+  }, [currentTheme.theme, fontSize, fontFamily, accentColor, isDarkMode]);
   
   // Update CSS variables for spacing
   const updateCssVariables = (spacingValue: number) => {
@@ -150,7 +150,9 @@ export function DataTable() {
     document.documentElement.style.setProperty("--ag-row-height", `${rowHeight}px`);
     document.documentElement.style.setProperty("--ag-header-height", `${headerHeight}px`);
     document.documentElement.style.setProperty("--ag-list-item-height", `${Math.max(25, spacingValue * 2.5)}px`);
+    // Add vertical gridlines with the same size as horizontal
     document.documentElement.style.setProperty("--ag-cell-horizontal-border", `solid ${Math.max(1, Math.floor(spacingValue / 8))}px var(--ag-border-color)`);
+    document.documentElement.style.setProperty("--ag-cell-vertical-border", `solid ${Math.max(1, Math.floor(spacingValue / 8))}px var(--ag-border-color)`);
     document.documentElement.style.setProperty("--ag-borders-side-panel", `${Math.max(1, Math.floor(spacingValue / 8))}px solid var(--ag-border-color)`);
     document.documentElement.style.setProperty("--ag-border-radius", `${Math.max(2, spacingValue / 4)}px`);
     document.documentElement.style.setProperty("--ag-tool-panel-horizontal-padding", `${spacingValue}px`);
@@ -163,12 +165,16 @@ export function DataTable() {
     
     // Create a theme with appropriate parameters
     const theme = currentTheme.theme.withParams({
-      fontSize: fontSize
+      fontSize: fontSize,
+      fontFamily: fontFamily,
+      columnBorder: true, // Add vertical gridlines
+      headerColumnBorder: true, // Add vertical gridlines in header
+      accentColor: accentColor // Use custom accent color
     });
     
     // Apply theme via API
     gridApiRef.current.setGridOption('theme', theme);
-  }, [currentTheme.theme, fontSize]);
+  }, [currentTheme.theme, fontSize, fontFamily, accentColor]);
 
   // Example data
   useEffect(() => {

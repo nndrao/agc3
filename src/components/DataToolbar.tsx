@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import { Button } from "./ui/button";
-import { Maximize2, Type, Plus, RefreshCw } from "lucide-react";
+import { Maximize2, Type, Plus, RefreshCw, Palette } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { ColorPicker } from "./ColorPicker";
 
 interface DataToolbarProps {
   onRefresh?: () => void;
@@ -87,13 +88,7 @@ export function DataToolbar({
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-6">
-          {/* Theme Selector */}
-          <ThemeSelector 
-            options={allThemes}
-            value={currentTheme}
-            setValue={updateTheme}
-            label="Theme"
-          />
+          {/* Theme Selector removed */}
           
           {/* Spacing Control */}
           <div className="flex items-center gap-2">
@@ -131,6 +126,13 @@ export function DataToolbar({
             <span className="text-sm min-w-12 text-center" style={{ color: colors.text }}>
               {fontSize}px
             </span>
+          </div>
+          
+          {/* Accent Color Picker */}
+          <div className="flex items-center gap-2">
+            <Palette className="h-4 w-4" style={{ color: colors.text }} />
+            <span className="text-sm" style={{ color: colors.text }}>Color:</span>
+            <ColorPicker />
           </div>
         </div>
         

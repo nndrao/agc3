@@ -20,6 +20,10 @@ interface ThemeContextType {
   updateSpacing: (value: number) => void;
   fontSize: number;
   updateFontSize: (value: number) => void;
+  fontFamily: string;
+  updateFontFamily: (value: string) => void;
+  accentColor: string;
+  updateAccentColor: (value: string) => void;
   allThemes: ThemeOption[];
   isDarkMode: boolean;
   toggleDarkMode: () => void;
@@ -40,32 +44,48 @@ const ThemeContext = createContext<ThemeContextType>({
   updateSpacing: () => {},
   fontSize: 13,
   updateFontSize: () => {},
+  fontFamily: 'JetBrains Mono',
+  updateFontFamily: () => {},
+  accentColor: '#2563eb', // Default blue accent color
+  updateAccentColor: () => {},
   allThemes: themes,
   isDarkMode: false,
   toggleDarkMode: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Default to Quartz theme
-  const [currentTheme, setCurrentTheme] = useState<ThemeOption>(themes[0]);
+  // Fixed to Quartz theme
+  const [currentTheme, setCurrentTheme] = useState<ThemeOption>(themes.find(t => t.id === 'quartz') || themes[0]);
   const [spacing, setSpacing] = useState(8); // Default AG Grid spacing
   const [fontSize, setFontSize] = useState(13); // Default AG Grid font size
+  const [fontFamily, setFontFamily] = useState('JetBrains Mono'); // Default font for trading data
+  const [accentColor, setAccentColor] = useState('#2563eb'); // Default blue accent color
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Load saved theme preference
+  // Always use Quartz theme
   useEffect(() => {
-    const savedThemeId = localStorage.getItem('theme-id');
-    if (savedThemeId) {
-      const savedTheme = themes.find(t => t.id === savedThemeId);
-      if (savedTheme) {
-        setCurrentTheme(savedTheme);
-      }
+    // Force Quartz theme
+    const quartzTheme = themes.find(t => t.id === 'quartz');
+    if (quartzTheme) {
+      setCurrentTheme(quartzTheme);
     }
     
     // Reset to default AG Grid spacing
     setSpacing(8);
     // Reset to default AG Grid font size
     setFontSize(13);
+    
+    // Load font family preference
+    const savedFontFamily = localStorage.getItem('theme-font-family');
+    if (savedFontFamily) {
+      setFontFamily(savedFontFamily);
+    }
+    
+    // Load accent color preference
+    const savedAccentColor = localStorage.getItem('theme-accent-color');
+    if (savedAccentColor) {
+      setAccentColor(savedAccentColor);
+    }
     
     // Clear any saved spacing and font size preferences to ensure defaults are used
     localStorage.removeItem('theme-spacing');
@@ -108,6 +128,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('theme-font-size', value.toString());
   };
 
+  const updateFontFamily = (value: string) => {
+    setFontFamily(value);
+    localStorage.setItem('theme-font-family', value);
+  };
+
+  const updateAccentColor = (value: string) => {
+    setAccentColor(value);
+    localStorage.setItem('theme-accent-color', value);
+  };
+
   const toggleDarkMode = () => {
     setIsDarkMode(prevMode => {
       const newMode = !prevMode;
@@ -140,6 +170,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         updateSpacing,
         fontSize,
         updateFontSize,
+        fontFamily,
+        updateFontFamily,
+        accentColor,
+        updateAccentColor,
         allThemes: themes,
         isDarkMode,
         toggleDarkMode
