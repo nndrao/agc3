@@ -4,6 +4,7 @@ import { Maximize2, Type, RefreshCw } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { SettingsMenu } from "./SettingsMenu";
 import { ColorPicker } from "./ColorPicker";
+import { FontSelect } from "./FontSelect";
 
 interface DataToolbarProps {
   onRefresh?: () => void;
@@ -18,6 +19,8 @@ export function DataToolbar({
     updateSpacing,
     fontSize,
     updateFontSize,
+    fontFamily,
+    updateFontFamily,
     accentColor,
     isDarkMode
   } = useTheme();
@@ -129,6 +132,50 @@ export function DataToolbar({
     };
   }, [isDarkMode]); // Changed: Removed accentColor dependency
 
+  // Apply selected font to AG Grid
+  useEffect(() => {
+    const rootEl = document.documentElement;
+    if (rootEl) {
+      rootEl.style.setProperty('--ag-font-family', fontFamily);
+      
+      // Also set a data attribute that can be used for styling
+      rootEl.setAttribute('data-font', fontFamily.split(',')[0].trim());
+      
+      // Apply font to custom elements (like inputs, etc)
+      const styleId = 'ag-grid-font-styles';
+      let styleElement = document.getElementById(styleId) as HTMLStyleElement;
+      
+      if (!styleElement) {
+        styleElement = document.createElement('style');
+        styleElement.id = styleId;
+        document.head.appendChild(styleElement);
+      }
+      
+      styleElement.textContent = `
+        .ag-theme-quartz,
+        .ag-theme-quartz-dark {
+          --ag-font-family: ${fontFamily};
+          font-family: ${fontFamily};
+        }
+        
+        .ag-theme-quartz .ag-header-cell,
+        .ag-theme-quartz-dark .ag-header-cell {
+          font-family: ${fontFamily};
+        }
+        
+        .ag-theme-quartz .ag-cell,
+        .ag-theme-quartz-dark .ag-cell {
+          font-family: ${fontFamily};
+        }
+        
+        .ag-theme-quartz input,
+        .ag-theme-quartz-dark input {
+          font-family: ${fontFamily};
+        }
+      `;
+    }
+  }, [fontFamily]);
+
   return (
     <div style={toolbarStyle} className="flex flex-col">
       {/* Main toolbar */}
@@ -140,6 +187,15 @@ export function DataToolbar({
             <div className="flex items-center gap-2">
               <span className="text-xs" style={labelStyle}>Color:</span>
               <ColorPicker initialColor={accentColor} />
+            </div>
+            
+            {/* Divider */}
+            <div className="h-5 w-px toolbar-divider"></div>
+            
+            {/* Font selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={labelStyle}>Font:</span>
+              <FontSelect />
             </div>
             
             {/* Divider */}
