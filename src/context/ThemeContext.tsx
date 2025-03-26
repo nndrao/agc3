@@ -3,9 +3,7 @@ import {
   themeAlpine, 
   themeQuartz, 
   themeBalham, 
-  themeMaterial,
-  colorSchemeDark,
-  colorSchemeLight 
+  themeMaterial
 } from 'ag-grid-community';
 import type { Theme } from 'ag-grid-community';
 
@@ -50,8 +48,8 @@ const ThemeContext = createContext<ThemeContextType>({
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Default to Quartz theme
   const [currentTheme, setCurrentTheme] = useState<ThemeOption>(themes[0]);
-  const [spacing, setSpacing] = useState(8);
-  const [fontSize, setFontSize] = useState(13);
+  const [spacing, setSpacing] = useState(8); // Default AG Grid spacing
+  const [fontSize, setFontSize] = useState(13); // Default AG Grid font size
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Load saved theme preference
@@ -64,17 +62,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       }
     }
     
-    // Load saved spacing
-    const savedSpacing = localStorage.getItem('theme-spacing');
-    if (savedSpacing) {
-      setSpacing(parseInt(savedSpacing, 10));
-    }
+    // Reset to default AG Grid spacing
+    setSpacing(8);
+    // Reset to default AG Grid font size
+    setFontSize(13);
     
-    // Load saved font size
-    const savedFontSize = localStorage.getItem('theme-font-size');
-    if (savedFontSize) {
-      setFontSize(parseInt(savedFontSize, 10));
-    }
+    // Clear any saved spacing and font size preferences to ensure defaults are used
+    localStorage.removeItem('theme-spacing');
+    localStorage.removeItem('theme-font-size');
 
     // Load saved dark mode preference
     const savedDarkMode = localStorage.getItem('dark-mode');

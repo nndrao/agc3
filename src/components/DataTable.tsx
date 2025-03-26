@@ -16,12 +16,6 @@ import { DataToolbar } from "./DataToolbar";
 // Register AG Grid Enterprise modules
 ModuleRegistry.registerModules([AllEnterpriseModule]);
 
-// Define a type for the tool panel item state changed event
-interface ToolPanelItemStateChangedEvent {
-  key: string;
-  opened: boolean;
-}
-
 // Define custom column types
 const columnTypes = {
   numberColumn: {
@@ -76,15 +70,10 @@ interface RowData {
 
 export function DataTable() {
   const [rowData, setRowData] = useState<RowData[]>([]);
-  const { currentTheme, spacing, fontSize, isDarkMode } = useTheme();
+  const { currentTheme, isDarkMode, spacing, fontSize } = useTheme();
   const gridRef = useRef<AgGridReact<RowData>>(null);
   const gridApiRef = useRef<GridApi | null>(null);
   
-  // Track if sidebar is open
-  const [isSideBarOpen, setIsSideBarOpen] = useState<boolean>(false);
-  // Track which sidebar tool panel is active
-  const [activeToolPanel, setActiveToolPanel] = useState<string | undefined>(undefined);
-
   const containerStyle = useMemo(() => ({ 
     width: "100%", 
     height: "calc(100vh - 7rem)",
@@ -114,61 +103,9 @@ export function DataTable() {
         filter: true,
         resizable: true,
         minWidth: 60,
-      },
-      // Configure the sidebar with the enhanced tool panels
-      sideBar: {
-        toolPanels: [
-          {
-            id: 'columns',
-            labelDefault: 'Columns',
-            labelKey: 'columns',
-            iconKey: 'columns',
-            toolPanel: 'agColumnsToolPanel',
-            toolPanelParams: {
-              suppressRowGroups: true,
-              suppressValues: true,
-              suppressPivots: true,
-              suppressPivotMode: true,
-              suppressColumnFilter: false,
-              suppressColumnSelectAll: false,
-              suppressColumnExpandAll: false
-            }
-          },
-          {
-            id: 'filters',
-            labelDefault: 'Filters',
-            labelKey: 'filters',
-            iconKey: 'filter',
-            toolPanel: 'agFiltersToolPanel',
-            toolPanelParams: {
-              suppressFilterSearch: false,
-              suppressExpandAll: false
-            }
-          }
-        ],
-        defaultToolPanel: activeToolPanel,
-        hiddenByDefault: !isSideBarOpen,
-        position: 'right'
-      },
-      // Callbacks for sidebar state changes
-      onToolPanelVisibleChanged: () => {
-        // Track sidebar open/closed state
-        const isVisible = gridApiRef.current?.isSideBarVisible() || false;
-        setIsSideBarOpen(isVisible);
-        
-        // If sidebar is closed, reset active panel
-        if (!isVisible) {
-          setActiveToolPanel(undefined);
-        }
-      },
-      onToolPanelItemStateChanged: (event: ToolPanelItemStateChangedEvent) => {
-        // Track which panel is open when sidebar is open
-        if (event.opened) {
-          setActiveToolPanel(event.key);
-        }
       }
     };
-  }, [activeToolPanel, isSideBarOpen]);
+  }, []);
 
   // Handle grid ready event to store API reference
   const onGridReady = (params: GridReadyEvent) => {
@@ -188,9 +125,9 @@ export function DataTable() {
     }, 100);
   };
   
-  // Update CSS variables when spacing changes - this is the only place spacing is handled now
+  // Update CSS variables when spacing changes
   useEffect(() => {
-    // Apply spacing via CSS variables only - for smoother transitions
+    // Apply spacing via CSS variables
     updateCssVariables(spacing);
   }, [spacing]);
   
@@ -200,12 +137,13 @@ export function DataTable() {
     applyTheme();
   }, [currentTheme.theme, fontSize, isDarkMode]);
   
-  // Update CSS variables for spacing - this will be the only spacing mechanism
+  // Update CSS variables for spacing
   const updateCssVariables = (spacingValue: number) => {
+    // Calculate proportional values based on spacing
     const rowHeight = Math.max(30, spacingValue * 3);
     const headerHeight = Math.max(32, spacingValue * 3);
     
-    // Update all spacing-related CSS custom properties
+    // Update all spacing-related CSS custom properties with values based on spacing parameter
     document.documentElement.style.setProperty("--ag-spacing", `${spacingValue}px`);
     document.documentElement.style.setProperty("--ag-grid-size", `${Math.max(4, spacingValue / 2)}px`);
     document.documentElement.style.setProperty("--ag-cell-horizontal-padding", `${spacingValue}px`);
@@ -223,9 +161,8 @@ export function DataTable() {
   const applyTheme = useCallback(() => {
     if (!gridApiRef.current) return;
     
-    // Create a theme with appropriate parameters, excluding spacing-specific ones
+    // Create a theme with appropriate parameters
     const theme = currentTheme.theme.withParams({
-      // Only apply non-spacing related parameters
       fontSize: fontSize
     });
     
@@ -269,6 +206,7 @@ export function DataTable() {
           {...gridOptions}
           ref={gridRef}
           rowData={rowData}
+          sideBar={true}
           columnDefs={columnDefs}
           columnTypes={columnTypes}
           onGridReady={onGridReady}

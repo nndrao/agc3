@@ -1,20 +1,11 @@
-import React, { useMemo, ReactNode } from "react";
+import React, { useMemo } from "react";
 import { Button } from "./ui/button";
 import { Maximize2, Type, Plus, RefreshCw } from "lucide-react";
-import { Slider } from "./ui/slider";
 import { useTheme } from "../context/ThemeContext";
 
 interface DataToolbarProps {
   onRefresh?: () => void;
-  onExport?: () => void;
-  onImport?: () => void;
   onAddNew?: () => void;
-}
-
-interface ThemeOption {
-  id: string;
-  label: string;
-  theme: any;
 }
 
 type PartSelectorProps<T extends { id: string } | null> = {
@@ -56,18 +47,16 @@ const ThemeSelector = <T extends { id: string; label?: string } | null>({
 
 export function DataToolbar({ 
   onRefresh, 
-  onExport, 
-  onImport, 
   onAddNew,
 }: DataToolbarProps) {
   const { 
     currentTheme,
     allThemes,
     updateTheme,
-    spacing, 
-    updateSpacing, 
-    fontSize, 
-    updateFontSize 
+    spacing,
+    updateSpacing,
+    fontSize,
+    updateFontSize
   } = useTheme();
 
   // Get current theme colors for styling
@@ -90,14 +79,6 @@ export function DataToolbar({
     document.documentElement.style.setProperty('--foreground', colors.text);
     document.documentElement.style.setProperty('--border', colors.border);
   }, [colors.background, colors.text, colors.border]);
-
-  const handleSpacingChange = (values: number[]) => {
-    updateSpacing(values[0]);
-  };
-
-  const handleFontSizeChange = (values: number[]) => {
-    updateFontSize(values[0]);
-  };
 
   return (
     <div 
@@ -123,6 +104,7 @@ export function DataToolbar({
               min="4"
               max="24"
               step="1"
+              defaultValue="8"
               value={spacing}
               onChange={(e) => updateSpacing(parseInt(e.target.value, 10))}
               className="w-24"
@@ -141,6 +123,7 @@ export function DataToolbar({
               min="10"
               max="18"
               step="1"
+              defaultValue="13"
               value={fontSize}
               onChange={(e) => updateFontSize(parseInt(e.target.value, 10))}
               className="w-24"
