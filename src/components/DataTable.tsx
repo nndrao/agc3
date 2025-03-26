@@ -79,11 +79,15 @@ export function DataTable() {
     height: "calc(100vh - 7rem)",
     display: "flex",
     flexDirection: "column" as const,
+    padding: "1rem",
   }), []);
 
   const gridStyle = useMemo(() => ({ 
     width: '100%',
-    flex: 1
+    flex: 1,
+    borderRadius: '2px',
+    overflow: 'hidden',
+    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
   }), []);
 
   // Define fixed grid options that won't change and cause rerenders
@@ -107,6 +111,101 @@ export function DataTable() {
     };
   }, []);
 
+  // Save grid state to localStorage
+  const saveGridState = useCallback(() => {
+    if (!gridApiRef.current) return;
+    
+    try {
+      // Save column state (visibility, order, width, etc)
+      const columnState = gridApiRef.current.getColumnState();
+      localStorage.setItem('ag-grid-column-state', JSON.stringify(columnState));
+      
+      // Save filter model
+      const filterModel = gridApiRef.current.getFilterModel();
+      localStorage.setItem('ag-grid-filter-model', JSON.stringify(filterModel));
+      
+      // Save sort model - note: some versions use different method names
+      let sortModel;
+      if (typeof gridApiRef.current.getSortModel === 'function') {
+        sortModel = gridApiRef.current.getSortModel();
+      } else if (typeof gridApiRef.current.getColumnState === 'function') {
+        // Extract sort info from column state
+        sortModel = gridApiRef.current.getColumnState()
+          .filter(col => col.sort)
+          .map(col => ({
+            colId: col.colId,
+            sort: col.sort
+          }));
+      }
+      
+      if (sortModel) {
+        localStorage.setItem('ag-grid-sort-model', JSON.stringify(sortModel));
+      }
+      
+      console.log('Grid state saved:', { columnState, filterModel, sortModel });
+    } catch (error) {
+      console.error('Error saving grid state:', error);
+    }
+  }, []);
+  
+  // Restore grid state from localStorage
+  const restoreGridState = useCallback(() => {
+    if (!gridApiRef.current) return;
+    
+    try {
+      // Restore column state
+      const savedColumnState = localStorage.getItem('ag-grid-column-state');
+      if (savedColumnState) {
+        const columnState = JSON.parse(savedColumnState);
+        gridApiRef.current.applyColumnState({
+          state: columnState,
+          applyOrder: true
+        });
+      }
+      
+      // Restore filter model
+      const savedFilterModel = localStorage.getItem('ag-grid-filter-model');
+      if (savedFilterModel) {
+        const filterModel = JSON.parse(savedFilterModel);
+        gridApiRef.current.setFilterModel(filterModel);
+      }
+      
+      // Restore sort model
+      const savedSortModel = localStorage.getItem('ag-grid-sort-model');
+      if (savedSortModel && typeof gridApiRef.current.setSortModel === 'function') {
+        try {
+          const sortModel = JSON.parse(savedSortModel);
+          gridApiRef.current.setSortModel(sortModel);
+        } catch (e) {
+          console.warn('Could not set sort model:', e);
+        }
+      } else if (savedSortModel) {
+        // Alternative approach to restore sorting
+        try {
+          const sortModel = JSON.parse(savedSortModel);
+          const columnState = gridApiRef.current.getColumnState().map(col => {
+            const sortInfo = sortModel.find(sm => sm.colId === col.colId);
+            if (sortInfo) {
+              return { ...col, sort: sortInfo.sort };
+            }
+            return col;
+          });
+          
+          gridApiRef.current.applyColumnState({
+            state: columnState,
+            applyOrder: true
+          });
+        } catch (e) {
+          console.warn('Could not restore sort model via column state:', e);
+        }
+      }
+      
+      console.log('Grid state restored');
+    } catch (error) {
+      console.error('Error restoring grid state:', error);
+    }
+  }, []);
+
   // Handle grid ready event to store API reference
   const onGridReady = (params: GridReadyEvent) => {
     gridApiRef.current = params.api;
@@ -117,12 +216,17 @@ export function DataTable() {
     // Apply spacing via CSS variables
     updateCssVariables(spacing);
     
+    // Restore previous grid state
+    setTimeout(() => {
+      restoreGridState();
+    }, 100);
+    
     // Force the grid to calculate its dimensions correctly after initialization
     setTimeout(() => {
       if (gridApiRef.current) {
         gridApiRef.current.sizeColumnsToFit();
       }
-    }, 100);
+    }, 200);
   };
   
   // Update CSS variables when spacing changes
@@ -137,11 +241,25 @@ export function DataTable() {
     applyTheme();
   }, [currentTheme.theme, fontSize, fontFamily, accentColor, isDarkMode]);
   
+  // Listen for preset-loaded events to restore grid state
+  useEffect(() => {
+    const handlePresetLoaded = () => {
+      console.log('Preset loaded event received - restoring grid state');
+      restoreGridState();
+    };
+    
+    document.addEventListener('preset-loaded', handlePresetLoaded);
+    
+    return () => {
+      document.removeEventListener('preset-loaded', handlePresetLoaded);
+    };
+  }, [restoreGridState]);
+  
   // Update CSS variables for spacing
   const updateCssVariables = (spacingValue: number) => {
     // Calculate proportional values based on spacing
-    const rowHeight = Math.max(30, spacingValue * 3);
-    const headerHeight = Math.max(32, spacingValue * 3);
+    const rowHeight = spacingValue * 3;
+    const headerHeight = spacingValue * 3;
     
     // Update all spacing-related CSS custom properties with values based on spacing parameter
     document.documentElement.style.setProperty("--ag-spacing", `${spacingValue}px`);
@@ -149,12 +267,19 @@ export function DataTable() {
     document.documentElement.style.setProperty("--ag-cell-horizontal-padding", `${spacingValue}px`);
     document.documentElement.style.setProperty("--ag-row-height", `${rowHeight}px`);
     document.documentElement.style.setProperty("--ag-header-height", `${headerHeight}px`);
-    document.documentElement.style.setProperty("--ag-list-item-height", `${Math.max(25, spacingValue * 2.5)}px`);
+    document.documentElement.style.setProperty("--ag-list-item-height", `${spacingValue * 2.5}px`);
     // Add vertical gridlines with the same size as horizontal
     document.documentElement.style.setProperty("--ag-cell-horizontal-border", `solid ${Math.max(1, Math.floor(spacingValue / 8))}px var(--ag-border-color)`);
     document.documentElement.style.setProperty("--ag-cell-vertical-border", `solid ${Math.max(1, Math.floor(spacingValue / 8))}px var(--ag-border-color)`);
     document.documentElement.style.setProperty("--ag-borders-side-panel", `${Math.max(1, Math.floor(spacingValue / 8))}px solid var(--ag-border-color)`);
-    document.documentElement.style.setProperty("--ag-border-radius", `${Math.max(2, spacingValue / 4)}px`);
+    
+    // Set explicit border radius for all AG Grid elements
+    document.documentElement.style.setProperty("--ag-border-radius", "2px");
+    document.documentElement.style.setProperty("--ag-card-radius", "2px");
+    document.documentElement.style.setProperty("--ag-modal-radius", "2px");
+    document.documentElement.style.setProperty("--ag-input-border-radius", "2px");
+    document.documentElement.style.setProperty("--ag-wrapper-border-radius", "2px");
+    document.documentElement.style.setProperty("--ag-widget-container-horizontal-padding", `${spacingValue}px`);
     document.documentElement.style.setProperty("--ag-tool-panel-horizontal-padding", `${spacingValue}px`);
     document.documentElement.style.setProperty("--ag-side-bar-panel-width", `${200 + spacingValue * 5}px`);
   };
@@ -169,11 +294,50 @@ export function DataTable() {
       fontFamily: fontFamily,
       columnBorder: true, // Add vertical gridlines
       headerColumnBorder: true, // Add vertical gridlines in header
-      accentColor: accentColor // Use custom accent color
+      accentColor: accentColor, // Use custom accent color
+      borderRadius: 2, // Fixed 2px border radius for all elements within the grid
+      wrapperBorderRadius: 2, // Set the wrapper border radius specifically
+      inputBorderRadius: 2, // Set border radius for inputs
+      cardRadius: 2, // Border radius for cards
+      modalRadius: 2 // Border radius for modals
     });
     
     // Apply theme via API
     gridApiRef.current.setGridOption('theme', theme);
+
+    // Additional CSS for elements that might not be covered by theme params
+    const styleElement = document.getElementById('ag-grid-custom-styles') || document.createElement('style');
+    styleElement.id = 'ag-grid-custom-styles';
+    styleElement.textContent = `
+      .ag-root-wrapper {
+        border-radius: 2px !important;
+      }
+      .ag-menu {
+        border-radius: 2px !important;
+      }
+      .ag-popup-child {
+        border-radius: 2px !important;
+      }
+      .ag-select-list-item {
+        border-radius: 0 !important;
+      }
+      .ag-picker-field-wrapper {
+        border-radius: 2px !important;
+      }
+      .ag-column-select-header {
+        border-radius: 0 !important;
+      }
+      .ag-tool-panel-wrapper {
+        border-radius: 0 !important;
+      }
+      .ag-tab {
+        border-radius: 0 !important;
+      } 
+    `;
+    
+    if (!document.getElementById('ag-grid-custom-styles')) {
+      document.head.appendChild(styleElement);
+    }
   }, [currentTheme.theme, fontSize, fontFamily, accentColor]);
 
   // Example data
@@ -207,7 +371,7 @@ export function DataTable() {
   return (
     <div style={containerStyle}>
       <DataToolbar onRefresh={() => {}} onAddNew={() => {}} />
-      <div style={gridStyle}>
+      <div style={gridStyle} className="mt-3">
         <AgGridReact<RowData>
           {...gridOptions}
           ref={gridRef}
@@ -217,6 +381,12 @@ export function DataTable() {
           columnTypes={columnTypes}
           onGridReady={onGridReady}
           loadThemeGoogleFonts={true}
+          onFilterChanged={saveGridState}
+          onSortChanged={saveGridState}
+          onColumnMoved={saveGridState}
+          onColumnResized={saveGridState}
+          onColumnVisible={saveGridState}
+          onColumnPinned={saveGridState}
         />
       </div>
     </div>

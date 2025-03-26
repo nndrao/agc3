@@ -7,6 +7,19 @@ import {
 } from 'ag-grid-community';
 import type { Theme } from 'ag-grid-community';
 
+export interface GridSettings {
+  id: string;
+  name: string;
+  spacing: number;
+  fontSize: number;
+  fontFamily: string;
+  accentColor: string;
+  isDarkMode: boolean;
+  columnState?: any;
+  filterModel?: any;
+  sortModel?: any;
+}
+
 interface ThemeOption {
   id: string;
   label: string;
@@ -27,6 +40,11 @@ interface ThemeContextType {
   allThemes: ThemeOption[];
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  savedSettings: GridSettings[];
+  saveSettings: (name: string) => string; // Returns the ID of the new setting
+  updateSettings: (id: string, newName?: string) => void; // Update existing setting
+  deleteSettings: (id: string) => void; // Delete a setting
+  loadSettings: (settingsId: string) => void;
 }
 
 // Define available themes
@@ -51,16 +69,31 @@ const ThemeContext = createContext<ThemeContextType>({
   allThemes: themes,
   isDarkMode: false,
   toggleDarkMode: () => {},
+  savedSettings: [],
+  saveSettings: () => "",
+  updateSettings: () => {},
+  deleteSettings: () => {},
+  loadSettings: () => {}
 });
+
+// Default settings
+const DEFAULT_SETTINGS: Omit<GridSettings, 'id' | 'name'> = {
+  spacing: 8,
+  fontSize: 13,
+  fontFamily: 'JetBrains Mono',
+  accentColor: '#2563eb',
+  isDarkMode: false
+};
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Fixed to Quartz theme
   const [currentTheme, setCurrentTheme] = useState<ThemeOption>(themes.find(t => t.id === 'quartz') || themes[0]);
-  const [spacing, setSpacing] = useState(8); // Default AG Grid spacing
-  const [fontSize, setFontSize] = useState(13); // Default AG Grid font size
-  const [fontFamily, setFontFamily] = useState('JetBrains Mono'); // Default font for trading data
-  const [accentColor, setAccentColor] = useState('#2563eb'); // Default blue accent color
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [spacing, setSpacing] = useState(DEFAULT_SETTINGS.spacing);
+  const [fontSize, setFontSize] = useState(DEFAULT_SETTINGS.fontSize);
+  const [fontFamily, setFontFamily] = useState(DEFAULT_SETTINGS.fontFamily);
+  const [accentColor, setAccentColor] = useState(DEFAULT_SETTINGS.accentColor);
+  const [isDarkMode, setIsDarkMode] = useState(DEFAULT_SETTINGS.isDarkMode);
+  const [savedSettings, setSavedSettings] = useState<GridSettings[]>([]);
 
   // Always use Quartz theme
   useEffect(() => {
@@ -70,10 +103,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setCurrentTheme(quartzTheme);
     }
     
-    // Reset to default AG Grid spacing
-    setSpacing(8);
-    // Reset to default AG Grid font size
-    setFontSize(13);
+    // Load saved settings from localStorage
+    const savedSettingsStr = localStorage.getItem('grid-saved-settings');
+    if (savedSettingsStr) {
+      try {
+        const savedPresets = JSON.parse(savedSettingsStr);
+        setSavedSettings(savedPresets);
+      } catch (e) {
+        console.error('Failed to parse saved settings', e);
+      }
+    }
     
     // Load font family preference
     const savedFontFamily = localStorage.getItem('theme-font-family');
@@ -87,10 +126,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setAccentColor(savedAccentColor);
     }
     
-    // Clear any saved spacing and font size preferences to ensure defaults are used
-    localStorage.removeItem('theme-spacing');
-    localStorage.removeItem('theme-font-size');
-
     // Load saved dark mode preference
     const savedDarkMode = localStorage.getItem('dark-mode');
     const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -137,6 +172,163 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setAccentColor(value);
     localStorage.setItem('theme-accent-color', value);
   };
+  
+  // Create a new settings preset
+  const saveSettings = (name: string) => {
+    // Get current grid state from localStorage
+    let columnState = null;
+    let filterModel = null;
+    let sortModel = null;
+    
+    try {
+      const columnStateStr = localStorage.getItem('ag-grid-column-state');
+      if (columnStateStr) columnState = JSON.parse(columnStateStr);
+      
+      const filterModelStr = localStorage.getItem('ag-grid-filter-model');
+      if (filterModelStr) filterModel = JSON.parse(filterModelStr);
+      
+      const sortModelStr = localStorage.getItem('ag-grid-sort-model');
+      if (sortModelStr) sortModel = JSON.parse(sortModelStr);
+    } catch (error) {
+      console.error('Error parsing grid state:', error);
+    }
+    
+    const newSetting: GridSettings = {
+      id: Date.now().toString(),
+      name,
+      spacing,
+      fontSize,
+      fontFamily,
+      accentColor,
+      isDarkMode,
+      columnState,
+      filterModel,
+      sortModel
+    };
+    
+    const updatedSettings = [...savedSettings, newSetting];
+    setSavedSettings(updatedSettings);
+    localStorage.setItem('grid-saved-settings', JSON.stringify(updatedSettings));
+    
+    console.log('Saved new preset:', newSetting);
+    return newSetting.id; // Return the ID of the new setting
+  };
+  
+  // Update an existing settings preset
+  const updateSettings = (id: string, newName?: string) => {
+    // Get current grid state
+    let columnState = null;
+    let filterModel = null;
+    let sortModel = null;
+    
+    try {
+      const columnStateStr = localStorage.getItem('ag-grid-column-state');
+      if (columnStateStr) columnState = JSON.parse(columnStateStr);
+      
+      const filterModelStr = localStorage.getItem('ag-grid-filter-model');
+      if (filterModelStr) filterModel = JSON.parse(filterModelStr);
+      
+      const sortModelStr = localStorage.getItem('ag-grid-sort-model');
+      if (sortModelStr) sortModel = JSON.parse(sortModelStr);
+    } catch (error) {
+      console.error('Error parsing grid state:', error);
+    }
+    
+    // Find the setting to update
+    const updatedSettings = savedSettings.map(setting => {
+      if (setting.id === id) {
+        return {
+          ...setting,
+          name: newName || setting.name,
+          spacing,
+          fontSize,
+          fontFamily,
+          accentColor,
+          isDarkMode,
+          columnState,
+          filterModel,
+          sortModel
+        };
+      }
+      return setting;
+    });
+    
+    setSavedSettings(updatedSettings);
+    localStorage.setItem('grid-saved-settings', JSON.stringify(updatedSettings));
+    console.log('Updated preset:', id);
+  };
+  
+  // Delete a settings preset
+  const deleteSettings = (id: string) => {
+    const filteredSettings = savedSettings.filter(setting => setting.id !== id);
+    setSavedSettings(filteredSettings);
+    localStorage.setItem('grid-saved-settings', JSON.stringify(filteredSettings));
+    console.log('Deleted preset:', id);
+  };
+  
+  const loadSettings = (settingsId: string) => {
+    console.log('Loading settings with ID:', settingsId);
+    const setting = savedSettings.find(s => s.id === settingsId);
+    if (!setting) {
+      console.error('Setting not found:', settingsId);
+      return;
+    }
+    
+    console.log('Found setting:', setting);
+    
+    // Apply visual theme settings
+    setSpacing(setting.spacing);
+    setFontSize(setting.fontSize);
+    setFontFamily(setting.fontFamily);
+    setAccentColor(setting.accentColor);
+    setIsDarkMode(setting.isDarkMode);
+    
+    // Apply dark mode changes
+    document.documentElement.dataset.agThemeMode = setting.isDarkMode ? 'dark' : 'light';
+    
+    if (setting.isDarkMode) {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+    }
+    
+    // Save individual theme settings to localStorage
+    localStorage.setItem('theme-spacing', setting.spacing.toString());
+    localStorage.setItem('theme-font-size', setting.fontSize.toString());
+    localStorage.setItem('theme-font-family', setting.fontFamily);
+    localStorage.setItem('theme-accent-color', setting.accentColor);
+    localStorage.setItem('dark-mode', setting.isDarkMode.toString());
+    
+    // Save grid state settings to localStorage so they can be picked up by the grid
+    if (setting.columnState) {
+      localStorage.setItem('ag-grid-column-state', JSON.stringify(setting.columnState));
+    }
+    
+    if (setting.filterModel) {
+      localStorage.setItem('ag-grid-filter-model', JSON.stringify(setting.filterModel));
+    }
+    
+    if (setting.sortModel) {
+      localStorage.setItem('ag-grid-sort-model', JSON.stringify(setting.sortModel));
+    }
+    
+    // Refresh the grid to apply state changes if a grid is present
+    // We use a timeout to ensure this runs after the current execution context
+    setTimeout(() => {
+      const gridElement = document.querySelector('.ag-root-wrapper');
+      if (gridElement) {
+        // If grid exists, find DataTable component's gridApi and call methods directly
+        try {
+          const event = new CustomEvent('preset-loaded');
+          document.dispatchEvent(event);
+        } catch (error) {
+          console.error('Error refreshing grid:', error);
+        }
+      }
+    }, 100);
+  };
 
   const toggleDarkMode = () => {
     setIsDarkMode(prevMode => {
@@ -176,7 +368,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         updateAccentColor,
         allThemes: themes,
         isDarkMode,
-        toggleDarkMode
+        toggleDarkMode,
+        savedSettings,
+        saveSettings,
+        updateSettings,
+        deleteSettings,
+        loadSettings
       }}
     >
       {children}
