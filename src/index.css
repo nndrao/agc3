@@ -58,36 +58,3 @@
   }
 }
 
-/* AG Grid theme overrides */
-[data-ag-theme-mode="light-red"] {
-  --ag-background-color: #FFE8E0;
-  --ag-foreground-color: #361008CC;
-}
-
-[data-ag-theme-mode="dark-red"] {
-  --ag-background-color: #201008;
-  --ag-foreground-color: #FFFFFFCC;
-}
-
-/* AG Grid theme overrides */
-.ag-theme-alpine,
-.ag-theme-alpine-dark {
-  --ag-font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  --ag-font-size: 14px;
-}
-
-.ag-theme-alpine {
-  --ag-background-color: #fff;
-  --ag-foreground-color: #181d1f;
-  --ag-border-color: #dde2eb;
-  --ag-header-background-color: #f8f9fa;
-  --ag-odd-row-background-color: #f8f9fa;
-}
-
-.ag-theme-alpine-dark {
-  --ag-background-color: #1a1d1f;
-  --ag-foreground-color: #fff;
-  --ag-border-color: #424242;
-  --ag-header-background-color: #242729;
-  --ag-odd-row-background-color: #242729;
-}

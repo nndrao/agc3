@@ -1,5 +1,5 @@
 import React from 'react';
-import { ThemeToggle } from './ThemeToggle';
+import { ThemeToggleSwitch } from './ThemeToggleSwitch';
 
 export function Header() {
   return (
@@ -9,6 +9,7 @@ export function Header() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-white">My App</h1>
         </div>
         <div className="flex items-center space-x-6">
+          <ThemeToggleSwitch />
           <nav>
             <ul className="flex space-x-6">
               <li><a href="#" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Home</a></li>
@@ -16,7 +17,6 @@ export function Header() {
               <li><a href="#" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Contact</a></li>
             </ul>
           </nav>
-          <ThemeToggle />
         </div>
       </div>
     </header>

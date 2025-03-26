@@ -1,32 +1,36 @@
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Define CSS variables for app styling */
+:root {
+  --primary-color: #00c2a8;
+  --negative-color: #ff4560;
+  --background-light: #f8f9fa;
+  --background-white: #ffffff;
+  --text-color-light: #333333;
+  --background-dark: #0f1217;
+  --text-color-dark: #aeb5c0;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Light mode (default) */
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--background-light);
+  color: var(--text-color-light);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+/* Dark mode */
+body.dark {
+  background-color: var(--background-dark);
+  color: var(--text-color-dark);
 }
 
-.card {
-  padding: 2em;
-  text-align: center;
+/* Only keep custom styling for our specific classes */
+.positive-value {
+  color: var(--primary-color);
 }
+
+.negative-value {
+  color: var(--negative-color);
+}
+

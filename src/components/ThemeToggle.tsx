@@ -1,33 +1,11 @@
-import { Moon, Sun } from "lucide-react"
-import { useTheme } from "@/context/ThemeContext"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import React from 'react';
 
-export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme()
+// This component is deprecated as we're now using a simplified theme approach
+// with direct theme selection via dropdown in the DataToolbar
 
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon">
-          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          <span className="sr-only">Toggle theme</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => theme !== 'light' && toggleTheme()}>
-          Light
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => theme !== 'dark' && toggleTheme()}>
-          Dark
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
+// Creating a no-op component to avoid import errors
+export const ThemeToggle: React.FC = () => {
+  return null;
+};
+
+// Keeping this file as a placeholder in case we need to re-implement a theme toggle in the future
