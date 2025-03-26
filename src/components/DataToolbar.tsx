@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { Maximize2, Type, RefreshCw } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { SettingsMenu } from "./SettingsMenu";
+import { ColorPicker } from "./ColorPicker";
 
 interface DataToolbarProps {
   onRefresh?: () => void;
@@ -23,23 +24,28 @@ export function DataToolbar({
 
   // Style object that uses AG Grid's CSS variables
   const toolbarStyle = useMemo(() => ({
-    backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff',
-    color: isDarkMode ? '#fff' : '#333',
-    borderBottom: `1px solid ${isDarkMode ? '#333' : '#e5e7eb'}`,
+    backgroundColor: isDarkMode ? '#181818' : '#f8f8f8',
+    color: isDarkMode ? '#fff' : '#000',
+    borderBottom: `1px solid ${isDarkMode ? '#444' : '#d1d5db'}`,
     borderRadius: '2px 2px 0 0'
   }), [isDarkMode]);
 
+  // High contrast value style
   const valueStyle = useMemo(() => ({
-    color: accentColor || '#3b82f6', // Blue accent for values
-    fontWeight: 500
-  }), [accentColor]);
-
-  const iconStyle = useMemo(() => ({
-    color: isDarkMode ? '#aaa' : '#666'
+    color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
+    fontWeight: 600,
+    textShadow: isDarkMode ? '0 0 1px rgba(0,0,0,0.5)' : 'none' // Better readability in dark mode
   }), [isDarkMode]);
 
+  // Higher contrast icon style
+  const iconStyle = useMemo(() => ({
+    color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)'
+  }), [isDarkMode]);
+
+  // Higher contrast label style
   const labelStyle = useMemo(() => ({
-    color: isDarkMode ? '#aaa' : '#666'
+    color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
+    fontWeight: 500
   }), [isDarkMode]);
 
   // Add custom stylesheet for sliders and other elements
@@ -54,12 +60,13 @@ export function DataToolbar({
     }
     
     // Create styles based on current theme
-    const thumbColor = accentColor || '#3b82f6';
-    const trackColor = isDarkMode ? '#333' : '#e5e7eb';
-    const buttonTextColor = isDarkMode ? '#aaa' : '#666';
-    const buttonHoverBg = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
-    const buttonHoverColor = isDarkMode ? 'white' : 'black';
-    const borderColor = isDarkMode ? '#444' : '#d1d5db';
+    // Higher contrast slider and button styles - matching profile label colors
+    const thumbColor = isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)';
+    const trackColor = isDarkMode ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)';
+    const buttonTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)';
+    const buttonHoverBg = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+    const buttonHoverColor = isDarkMode ? '#ffffff' : '#000000';
+    const borderColor = isDarkMode ? '#666' : '#a3a3a3'; // Higher contrast borders
     
     styleElement.textContent = `
       .ag-toolbar-slider {
@@ -67,29 +74,32 @@ export function DataToolbar({
         appearance: none;
         background: ${trackColor};
         border-radius: 2px;
-        height: 3px;
+        height: 4px; /* Slightly thicker track */
         outline: none;
       }
       .ag-toolbar-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%; 
         background: ${thumbColor};
         cursor: pointer;
+        box-shadow: 0 0 2px rgba(0,0,0,0.5); /* Add shadow for better visibility */
       }
       .ag-toolbar-slider::-moz-range-thumb {
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         background: ${thumbColor};
         cursor: pointer;
         border: none;
+        box-shadow: 0 0 2px rgba(0,0,0,0.5); /* Add shadow for better visibility */
       }
       .ag-toolbar-btn {
         color: ${buttonTextColor};
         background: transparent;
+        font-weight: 500;
       }
       .ag-toolbar-btn:hover {
         color: ${buttonHoverColor};
@@ -100,6 +110,12 @@ export function DataToolbar({
         height: 20px;
         border-radius: 4px;
         border: 1px solid ${borderColor};
+        cursor: pointer;
+        transition: transform 0.15s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Add shadow for better contrast */
+      }
+      .color-swatch:hover {
+        transform: scale(1.1);
       }
       .toolbar-divider {
         background-color: ${borderColor};
@@ -111,7 +127,7 @@ export function DataToolbar({
         styleElement.parentNode.removeChild(styleElement);
       }
     };
-  }, [isDarkMode, accentColor]);
+  }, [isDarkMode]); // Changed: Removed accentColor dependency
 
   return (
     <div style={toolbarStyle} className="flex flex-col">
@@ -122,8 +138,8 @@ export function DataToolbar({
           <div className="flex items-center gap-4">
             {/* Color */}
             <div className="flex items-center gap-2">
-              <span className="text-xs" style={labelStyle}>Color</span>
-              <div className="color-swatch" style={{ backgroundColor: accentColor || '#3b82f6' }}></div>
+              <span className="text-xs" style={labelStyle}>Color:</span>
+              <ColorPicker initialColor={accentColor} />
             </div>
             
             {/* Divider */}
@@ -135,6 +151,10 @@ export function DataToolbar({
               size="sm" 
               onClick={onRefresh}
               className="h-7 px-2 text-xs font-medium rounded-sm ag-toolbar-btn"
+              style={{
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
+                fontWeight: 500
+              }}
             >
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
               <span>Refresh</span>
