@@ -15,9 +15,9 @@ export interface GridSettings {
   fontFamily: string;
   accentColor: string;
   isDarkMode: boolean;
-  columnState?: any;
-  filterModel?: any;
-  sortModel?: any;
+  columnState?: Record<string, unknown>;
+  filterModel?: Record<string, unknown>;
+  sortModel?: Array<{ colId: string; sort: string }>;
 }
 
 interface ThemeOption {
@@ -331,26 +331,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleDarkMode = () => {
-    setIsDarkMode(prevMode => {
-      const newMode = !prevMode;
-      
-      // Update AG Grid theme mode
-      document.documentElement.dataset.agThemeMode = newMode ? 'dark' : 'light';
-      
-      // Update Tailwind dark mode
-      if (newMode) {
-        document.documentElement.classList.add('dark');
-        document.body.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-        document.body.classList.remove('dark');
-      }
-      
-      // Save preference
-      localStorage.setItem('dark-mode', newMode.toString());
-      
-      return newMode;
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    localStorage.setItem('dark-mode', newDarkMode.toString());
+    
+    // Update data-ag-theme-mode attribute for AG Grid
+    document.documentElement.dataset.agThemeMode = newDarkMode ? 'dark' : 'light';
+    
+    // Update Tailwind dark mode classes
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+    }
+
+    // Dispatch a custom event to notify components of theme change
+    const event = new CustomEvent('theme-changed', { 
+      detail: { isDarkMode: newDarkMode } 
     });
+    document.dispatchEvent(event);
   };
 
   return (

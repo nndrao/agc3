@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { AgGridReact } from 'ag-grid-react';
 import { 
   ColDef,
@@ -283,13 +283,55 @@ interface RowData {
 }
 
 export function DataTable() {
-  // Use modular hooks
+  const { spacing, fontSize, fontFamily, accentColor, currentTheme } = useTheme();
+  const { gridApiRef, saveGridState, restoreGridState } = useGridState();
+  const themeParams = useGridThemeParams();
   const { rowData } = useSampleData();
   const columnTypes = useColumnTypes();
   const columnDefs = useColumnDefs();
-  const { gridApiRef, saveGridState, restoreGridState } = useGridState();
-  const themeParams = useGridThemeParams();
-  
+
+  // Handle theme changes
+  useEffect(() => {
+    const handleThemeChange = (event: CustomEvent) => {
+      const { isDarkMode: newDarkMode } = event.detail;
+      if (gridApiRef.current) {
+        // Update AG Grid theme by updating the container class
+        const gridElement = document.querySelector('.ag-theme-quartz, .ag-theme-quartz-dark');
+        if (gridElement) {
+          gridElement.classList.remove('ag-theme-quartz', 'ag-theme-quartz-dark');
+          gridElement.classList.add(newDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz');
+        }
+      }
+    };
+
+    // Listen for theme changes
+    document.addEventListener('theme-changed', handleThemeChange as EventListener);
+    
+    return () => {
+      document.removeEventListener('theme-changed', handleThemeChange as EventListener);
+    };
+  }, [gridApiRef]);
+
+  // Grid options
+  const gridOptions = useMemo<GridOptions>(() => ({
+    suppressCellFocus: false,
+    rowModelType: "clientSide",
+    suppressRowClickSelection: true,
+    rowSelection: "multiple",
+    enableRangeSelection: true,
+    enableCellTextSelection: true,
+    pagination: true,
+    paginationAutoPageSize: true,
+    animateRows: true,
+    defaultColDef: {
+      sortable: true,
+      filter: true,
+      resizable: true,
+      minWidth: 60,
+    },
+    theme: currentTheme.theme,
+  }), [currentTheme.theme, spacing, fontSize, fontFamily, accentColor]);
+
   const gridRef = useRef<AgGridReact<RowData>>(null);
   
   // Container styles
@@ -308,27 +350,6 @@ export function DataTable() {
     overflow: 'hidden',
     boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
   }), []);
-
-  // Define fixed grid options that won't change and cause rerenders
-  const gridOptions = useMemo<GridOptions<RowData>>(() => {
-    return {
-      suppressCellFocus: false,
-      rowModelType: "clientSide",
-      suppressRowClickSelection: true,
-      rowSelection: "multiple",
-      enableRangeSelection: true,
-      enableCellTextSelection: true,
-      pagination: true,
-      paginationAutoPageSize: true,
-      animateRows: true,
-      defaultColDef: {
-        sortable: true,
-        filter: true,
-        resizable: true,
-        minWidth: 60,
-      }
-    };
-  }, []);
 
   // Function to apply theme parameters to the grid (defined before it's used in onGridReady)
   const applyGridTheme = useCallback(() => {

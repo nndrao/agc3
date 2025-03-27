@@ -5,6 +5,7 @@ import { useTheme } from "../context/ThemeContext";
 import { SettingsMenu } from "./SettingsMenu";
 import { ColorPicker } from "./ColorPicker";
 import { FontSelect } from "./FontSelect";
+import { SettingsDropdown } from "./SettingsDropdown";
 
 interface DataToolbarProps {
   onRefresh?: () => void;
@@ -249,10 +250,11 @@ export function DataToolbar({
               <span className="text-xs min-w-[28px] text-center" style={valueStyle}>{fontSize}px</span>
             </div>
           </div>
-          
-          {/* Right group - presets */}
-          <div className="flex items-center">
+
+          {/* Right group */}
+          <div className="flex items-center gap-2">
             <SettingsMenu />
+            <SettingsDropdown />
           </div>
         </div>
       </div>

@@ -35,7 +35,7 @@ export function SettingsMenu({ className }: SettingsMenuProps) {
   const handleSavePreset = () => {
     const trimmedName = presetName.trim();
     if (!trimmedName) {
-      setSaveError("Please enter a name for your view");
+      setSaveError("Please enter a name for your profile");
       return;
     }
 
@@ -47,7 +47,7 @@ export function SettingsMenu({ className }: SettingsMenuProps) {
       );
       
       if (duplicateName) {
-        setSaveError(`A view named "${trimmedName}" already exists`);
+        setSaveError(`A profile named "${trimmedName}" already exists`);
         return;
       }
     }
@@ -75,8 +75,8 @@ export function SettingsMenu({ className }: SettingsMenuProps) {
       const event = new CustomEvent(isNewView ? 'preset-loaded' : 'preset-updated');
       document.dispatchEvent(event);
     } catch (error) {
-      console.error("Error saving view:", error);
-      setSaveError("Failed to save view. Please try again.");
+      console.error("Error saving profile:", error);
+      setSaveError("Failed to save profile. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -112,7 +112,7 @@ export function SettingsMenu({ className }: SettingsMenuProps) {
       setCurrentPreset(presetId);
       setShowSettingsDropdown(false);
     } catch (error) {
-      console.error("Error loading view:", error);
+      console.error("Error loading profile:", error);
       // Could add a toast notification here
     }
   };
@@ -138,7 +138,7 @@ export function SettingsMenu({ className }: SettingsMenuProps) {
         const event = new CustomEvent('preset-updated');
         document.dispatchEvent(event);
       } catch (error) {
-        console.error("Error updating view:", error);
+        console.error("Error updating profile:", error);
         // Could add a toast notification here
       }
     }
@@ -159,7 +159,7 @@ export function SettingsMenu({ className }: SettingsMenuProps) {
           setCurrentPreset(null);
         }
       } catch (error) {
-        console.error("Error deleting view:", error);
+        console.error("Error deleting profile:", error);
         // Could add a toast notification here
       }
     } else {
@@ -341,7 +341,7 @@ export function SettingsMenu({ className }: SettingsMenuProps) {
             ? (isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)') 
             : 'transparent',
           height: '28px',
-          padding: '0 10px',
+          padding: '0 16px',
           fontSize: '12px',
           borderRadius: '3px',
           fontWeight: 500,
@@ -350,12 +350,13 @@ export function SettingsMenu({ className }: SettingsMenuProps) {
             : '1px solid rgba(0, 0, 0, 0.1)',
           boxShadow: showSettingsDropdown 
             ? (isDarkMode ? '0 0 0 1px rgba(255, 255, 255, 0.1)' : '0 0 0 1px rgba(0, 0, 0, 0.05)')
-            : 'none'
+            : 'none',
+          minWidth: '200px'
         }}
         onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
       >
-        <span className="mr-1.5 max-w-[100px] truncate">
-          {currentPreset ? getCurrentPresetName() : 'Views'}
+        <span className="mr-1.5 max-w-[200px] truncate">
+          {currentPreset ? getCurrentPresetName() : 'Profiles'}
         </span>
         <ChevronDown 
           className="h-3 w-3 transition-transform duration-300" 
@@ -405,7 +406,7 @@ export function SettingsMenu({ className }: SettingsMenuProps) {
             position: 'absolute',
             top: '34px',
             right: '-8px',
-            width: '200px',
+            width: '300px',
             maxHeight: '350px',
             backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff',
             border: `1px solid ${isDarkMode ? '#333' : '#e0e0e0'}`,
