@@ -6,7 +6,7 @@ export function ThemeToggleSwitch() {
 
   return (
     <div className="flex items-center">
-      <span className="mr-2 text-gray-600 dark:text-gray-300">
+      <span className="mr-2 text-muted-foreground">
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
           className="h-5 w-5" 
@@ -23,18 +23,18 @@ export function ThemeToggleSwitch() {
       
       <button
         onClick={toggleDarkMode}
-        className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 bg-gray-200 dark:bg-blue-600"
+        className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-secondary"
         role="switch"
         aria-checked={isDarkMode}
       >
         <span 
           className={`${
             isDarkMode ? 'translate-x-6' : 'translate-x-1'
-          } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+          } inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform`}
         />
       </button>
       
-      <span className="ml-2 text-gray-600 dark:text-gray-300">
+      <span className="ml-2 text-muted-foreground">
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
           className="h-5 w-5" 

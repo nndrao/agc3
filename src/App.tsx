@@ -4,6 +4,7 @@ import { Header } from './components/Header'
 import { Footer } from './components/Footer'
 import { DataTable } from './components/DataTable'
 import { LicenseManager } from 'ag-grid-enterprise'
+import { Toaster } from "./components/ui/toaster"
 
 // Set up AG Grid enterprise for development/trial
 // Remove this in production with a valid license
@@ -17,6 +18,7 @@ function App() {
         <DataTable />
       </main>
       <Footer />
+      <Toaster />
     </div>
   )
 }

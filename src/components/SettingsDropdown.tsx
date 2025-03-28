@@ -1,7 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Settings, ChevronDown, Sliders, Columns, Layers, Calculator, Palette, Zap, Filter, Edit } from 'lucide-react';
 import { Button } from './ui/button';
 import { useTheme } from '../context/ThemeContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { GeneralSettingsDialog } from "./GeneralSettingsDialog";
 
 interface SettingsDropdownProps {
   className?: string;
@@ -10,6 +19,7 @@ interface SettingsDropdownProps {
 export function SettingsDropdown({ className }: SettingsDropdownProps) {
   const { isDarkMode } = useTheme();
   const [showDropdown, setShowDropdown] = React.useState(false);
+  const [showGeneralSettings, setShowGeneralSettings] = useState(false);
 
   const menuItems = [
     { icon: Sliders, label: 'General Settings' },
@@ -23,38 +33,28 @@ export function SettingsDropdown({ className }: SettingsDropdownProps) {
   ];
 
   return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="ag-toolbar-btn transition-all duration-200"
-        style={{
-          color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
-          background: showDropdown 
-            ? (isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)') 
-            : 'transparent',
-          height: '28px',
-          padding: '0 12px',
-          fontSize: '12px',
-          borderRadius: '3px',
-          fontWeight: 500,
-          border: isDarkMode 
-            ? '1px solid rgba(255, 255, 255, 0.1)' 
-            : '1px solid rgba(0, 0, 0, 0.1)',
-          boxShadow: showDropdown 
-            ? (isDarkMode ? '0 0 0 1px rgba(255, 255, 255, 0.1)' : '0 0 0 1px rgba(0, 0, 0, 0.05)')
-            : 'none',
-        }}
-        onClick={() => setShowDropdown(!showDropdown)}
-      >
-        <Settings className="h-3.5 w-3.5 mr-1.5" />
-        <span>Settings</span>
-        <ChevronDown 
-          className="h-3 w-3 ml-1 transition-transform duration-300" 
-          style={{ transform: showDropdown ? 'rotate(180deg)' : 'rotate(0)' }}
-        />
-      </Button>
-
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
+            <Settings className="h-4 w-4" />
+            <span className="sr-only">Open settings menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>Settings</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setShowGeneralSettings(true)}>
+            General Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem>Keyboard Shortcuts</DropdownMenuItem>
+          <DropdownMenuItem>About</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <GeneralSettingsDialog 
+        open={showGeneralSettings} 
+        onOpenChange={setShowGeneralSettings} 
+      />
       {showDropdown && (
         <>
           <div 
@@ -100,6 +100,6 @@ export function SettingsDropdown({ className }: SettingsDropdownProps) {
           />
         </>
       )}
-    </div>
+    </>
   );
 } 

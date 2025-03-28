@@ -5,74 +5,489 @@ import {
   ModuleRegistry,
   GridOptions,
   ValueFormatterParams,
-  CellClassParams,
   GridApi,
   GridReadyEvent,
-  Theme
+  Theme,
+  CellStyle,
+  themeQuartz
 } from 'ag-grid-community';
 import { AllEnterpriseModule } from 'ag-grid-enterprise';
 import { useTheme } from '../context/ThemeContext';
 import { DataToolbar } from "./DataToolbar";
+import { generatePositions, formatPositionValue } from "../lib/dummyData";
+import type { Position } from "../lib/dummyData";
 
 // Register AG Grid Enterprise modules
 ModuleRegistry.registerModules([AllEnterpriseModule]);
+
+// Grid Theme Parameters Hook
+interface GridThemeParams {
+  baseTheme: Theme;
+  isDarkMode: boolean;
+  fontSize: number;
+  fontFamily: string;
+  accentColor: string;
+  borderRadius: number;
+  borders: boolean;
+  cellBorders: boolean;
+  headerBorders: boolean;
+  columnBorder: boolean;
+  headerColumnBorder: boolean;
+  spacing: number;
+  rowHeight: number;
+  headerHeight: number;
+  listItemHeight: number;
+  gridSize: number;
+  borderWidth: number;
+  cellHorizontalPadding: number;
+  sideBarWidth: number;
+}
+
+const useGridThemeParams = (): GridThemeParams => {
+  const { spacing, fontSize, fontFamily, accentColor, currentTheme, isDarkMode } = useTheme();
+  
+  const themeParams = useMemo<GridThemeParams>(() => {
+    // Calculate borderWidth once
+    const borderWidth = Math.max(1, Math.floor(spacing / 8));
+    
+    return {
+      baseTheme: currentTheme.theme,
+      isDarkMode,
+      fontSize,
+      fontFamily,
+      accentColor,
+      borderRadius: 2,
+      borders: true,
+      cellBorders: true,
+      headerBorders: true,
+      columnBorder: true,
+      headerColumnBorder: true,
+      spacing,
+      rowHeight: spacing * 3,
+      headerHeight: spacing * 3,
+      listItemHeight: spacing * 2.5,
+      gridSize: Math.max(4, spacing / 2),
+      borderWidth,
+      cellHorizontalPadding: spacing,
+      sideBarWidth: 200 + spacing * 5,
+    };
+  }, [currentTheme.theme, isDarkMode, spacing, fontSize, fontFamily, accentColor]);
+  
+  return themeParams;
+};
+
+// Custom theme configuration with dynamic parameters
+const getCustomTheme = (isDarkMode: boolean, themeParams: GridThemeParams) => {
+  return themeQuartz
+    .withParams(
+      {
+        accentColor: "#8AAAA7",
+        backgroundColor: "#F7F7F7",
+        borderColor: "#23202029",
+        browserColorScheme: "light",
+        buttonBorderRadius: 2,
+        cellTextColor: "#000000",
+        checkboxBorderRadius: 2,
+        columnBorder: true,
+        fontFamily: {
+          googleFont: "Inter",
+        },
+        fontSize: themeParams.fontSize,
+        headerBackgroundColor: "#EFEFEFD6",
+        headerFontFamily: {
+          googleFont: "Inter",
+        },
+        headerFontSize: themeParams.fontSize,
+        headerFontWeight: 500,
+        iconButtonBorderRadius: 1,
+        iconSize: 12,
+        inputBorderRadius: 2,
+        oddRowBackgroundColor: "#EEF1F1E8",
+        spacing: themeParams.spacing,
+        wrapperBorderRadius: 2,
+      },
+      "light"
+    )
+    .withParams(
+      {
+        accentColor: "#8AAAA7",
+        backgroundColor: "#1f2836",
+        borderRadius: 2,
+        checkboxBorderRadius: 2,
+        columnBorder: true,
+        fontFamily: {
+          googleFont: "Inter",
+        },
+        browserColorScheme: "dark",
+        chromeBackgroundColor: {
+          ref: "foregroundColor",
+          mix: 0.07,
+          onto: "backgroundColor",
+        },
+        fontSize: themeParams.fontSize,
+        foregroundColor: "#FFF",
+        headerFontFamily: {
+          googleFont: "Inter",
+        },
+        headerFontSize: themeParams.fontSize,
+        iconSize: 12,
+        inputBorderRadius: 2,
+        oddRowBackgroundColor: "#2A2E35",
+        spacing: themeParams.spacing,
+        wrapperBorderRadius: 2,
+      },
+      "dark"
+    );
+};
 
 // ----- Modular Components -----
 
 // Custom Column Types
 const useColumnTypes = () => {
   return useMemo(() => ({
-    numberColumn: {
+    customNumeric: {
       filter: "agNumberColumnFilter",
       valueFormatter: (params: ValueFormatterParams) => {
         return params.value != null ? params.value.toFixed(2) : "-";
       },
-      cellClass: (params: CellClassParams) => {
-        if (params.value === null) return "";
-        return params.value >= 0 ? "positive-value" : "negative-value";
-      },
       headerClass: 'ag-right-aligned-header',
-      cellStyle: { textAlign: 'right' }
+      cellStyle: (params: ValueFormatterParams) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle
     },
-    currencyColumn: {
+    customCurrency: {
       filter: "agNumberColumnFilter",
       valueFormatter: (params: ValueFormatterParams) => {
         return params.value != null ? "$" + params.value.toFixed(2) : "-";
       },
-      cellClass: (params: CellClassParams) => {
-        if (params.value === null) return "";
-        return params.value >= 0 ? "positive-value" : "negative-value";
-      },
       headerClass: 'ag-right-aligned-header',
-      cellStyle: { textAlign: 'right' }
+      cellStyle: (params: ValueFormatterParams) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle
     },
-    percentColumn: {
+    customPercent: {
       filter: "agNumberColumnFilter",
       valueFormatter: (params: ValueFormatterParams) => {
         return params.value != null ? params.value.toFixed(2) + "%" : "-";
       },
-      cellClass: (params: CellClassParams) => {
-        if (params.value === null) return "";
-        return params.value >= 0 ? "positive-value" : "negative-value";
-      },
       headerClass: 'ag-right-aligned-header',
-      cellStyle: { textAlign: 'right' }
+      cellStyle: (params: ValueFormatterParams) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle
     },
   }), []);
 };
 
 // Column Definitions
 const useColumnDefs = () => {
-  return useMemo<ColDef<RowData>[]>(() => [
-    { headerName: "Athlete", field: "athlete", filter: true },
-    { headerName: "Age", field: "age", filter: true, width: 100, type: 'numberColumn' },
-    { headerName: "Country", field: "country", filter: true },
-    { headerName: "Year", field: "year", filter: true, width: 100, type: 'numberColumn' },
-    { headerName: "Sport", field: "sport", filter: true },
-    { headerName: "Gold", field: "gold", filter: true, width: 100, type: 'numberColumn' },
-    { headerName: "Silver", field: "silver", filter: true, width: 100, type: 'numberColumn' },
-    { headerName: "Bronze", field: "bronze", filter: true, width: 100, type: 'numberColumn' },
-    { headerName: "Total", field: "total", filter: true, width: 100, type: 'numberColumn' }
+  return useMemo<ColDef<Position>[]>(() => [
+    {
+      field: "symbol",
+      headerName: "Symbol",
+      pinned: "left",
+      initialWidth: 100,
+    },
+    {
+      field: "name",
+      headerName: "Name",
+      pinned: "left",
+      initialWidth: 150,
+    },
+    {
+      field: "quantity",
+      headerName: "Quantity",
+      initialWidth: 100,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: { textAlign: 'right' } as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "avgPrice",
+      headerName: "Avg Price",
+      initialWidth: 120,
+      type: 'customCurrency',
+      valueFormatter: (params) => formatPositionValue(params.value, 'currency'),
+      cellStyle: { textAlign: 'right' } as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "currentPrice",
+      headerName: "Current Price",
+      initialWidth: 120,
+      type: 'customCurrency',
+      valueFormatter: (params) => formatPositionValue(params.value, 'currency'),
+      cellStyle: { textAlign: 'right' } as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "marketValue",
+      headerName: "Market Value",
+      initialWidth: 120,
+      type: 'customCurrency',
+      valueFormatter: (params) => formatPositionValue(params.value, 'currency'),
+      cellStyle: { textAlign: 'right' } as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "pnl",
+      headerName: "PnL",
+      initialWidth: 120,
+      type: 'customCurrency',
+      valueFormatter: (params) => formatPositionValue(params.value, 'currency'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        backgroundColor: params.value >= 0 ? 'rgba(0, 255, 186, 0.1)' : 'rgba(255, 59, 59, 0.1)',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "pnlPercentage",
+      headerName: "PnL %",
+      initialWidth: 120,
+      type: 'customPercent',
+      valueFormatter: (params) => formatPositionValue(params.value, 'percentage'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        backgroundColor: params.value >= 0 ? 'rgba(0, 255, 186, 0.1)' : 'rgba(255, 59, 59, 0.1)',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "dailyPnL",
+      headerName: "Daily PnL",
+      initialWidth: 120,
+      type: 'customCurrency',
+      valueFormatter: (params) => formatPositionValue(params.value, 'currency'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        backgroundColor: params.value >= 0 ? 'rgba(0, 255, 186, 0.1)' : 'rgba(255, 59, 59, 0.1)',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "dailyPnLPercentage",
+      headerName: "Daily PnL %",
+      initialWidth: 120,
+      type: 'customPercent',
+      valueFormatter: (params) => formatPositionValue(params.value, 'percentage'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        backgroundColor: params.value >= 0 ? 'rgba(0, 255, 186, 0.1)' : 'rgba(255, 59, 59, 0.1)',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "volume",
+      headerName: "Volume",
+      initialWidth: 120,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "openInterest",
+      headerName: "Open Interest",
+      initialWidth: 120,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "delta",
+      headerName: "Delta",
+      initialWidth: 120,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "gamma",
+      headerName: "Gamma",
+      initialWidth: 120,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "theta",
+      headerName: "Theta",
+      initialWidth: 120,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "vega",
+      headerName: "Vega",
+      initialWidth: 120,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "impliedVolatility",
+      headerName: "IV",
+      initialWidth: 120,
+      type: 'customPercent',
+      valueFormatter: (params) => formatPositionValue(params.value, 'percentage'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "realizedVolatility",
+      headerName: "RV",
+      initialWidth: 120,
+      type: 'customPercent',
+      valueFormatter: (params) => formatPositionValue(params.value, 'percentage'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "beta",
+      headerName: "Beta",
+      initialWidth: 120,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "correlation",
+      headerName: "Correlation",
+      initialWidth: 120,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "sharpeRatio",
+      headerName: "Sharpe",
+      initialWidth: 120,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "sortinoRatio",
+      headerName: "Sortino",
+      initialWidth: 120,
+      type: 'customNumeric',
+      valueFormatter: (params) => formatPositionValue(params.value, 'number'),
+      cellStyle: (params) => ({ 
+        textAlign: 'right',
+        color: params.value >= 0 ? '#00FFBA' : '#FF3B3B'
+      }) as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "maxDrawdown",
+      headerName: "Max DD",
+      initialWidth: 120,
+      type: 'customPercent',
+      valueFormatter: (params) => formatPositionValue(params.value, 'percentage'),
+      cellStyle: { 
+        textAlign: 'right',
+        color: '#FF3B3B' // Always red for drawdown
+      } as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "var95",
+      headerName: "VaR 95%",
+      initialWidth: 120,
+      type: 'customCurrency',
+      valueFormatter: (params) => formatPositionValue(params.value, 'currency'),
+      cellStyle: { 
+        textAlign: 'right',
+        color: '#FF3B3B' // Always red for VaR
+      } as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "var99",
+      headerName: "VaR 99%",
+      initialWidth: 120,
+      type: 'customCurrency',
+      valueFormatter: (params) => formatPositionValue(params.value, 'currency'),
+      cellStyle: { 
+        textAlign: 'right',
+        color: '#FF3B3B' // Always red for VaR
+      } as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "expectedShortfall",
+      headerName: "ES",
+      initialWidth: 120,
+      type: 'customCurrency',
+      valueFormatter: (params) => formatPositionValue(params.value, 'currency'),
+      cellStyle: { 
+        textAlign: 'right',
+        color: '#FF3B3B' // Always red for ES
+      } as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
+    {
+      field: "stressTestLoss",
+      headerName: "Stress Loss",
+      initialWidth: 120,
+      type: 'customCurrency',
+      valueFormatter: (params) => formatPositionValue(params.value, 'currency'),
+      cellStyle: { 
+        textAlign: 'right',
+        color: '#FF3B3B' // Always red for stress loss
+      } as CellStyle,
+      headerClass: 'ag-right-aligned-header',
+    },
   ], []);
 };
 
@@ -184,85 +599,13 @@ const useGridState = () => {
   };
 };
 
-// Grid Theme Parameters Hook
-interface GridThemeParams {
-  baseTheme: Theme;
-  isDarkMode: boolean;
-  fontSize: number;
-  fontFamily: string;
-  accentColor: string;
-  borderRadius: number;
-  borders: boolean;
-  cellBorders: boolean;
-  headerBorders: boolean;
-  columnBorder: boolean;
-  headerColumnBorder: boolean;
-  spacing: number;
-  rowHeight: number;
-  headerHeight: number;
-  listItemHeight: number;
-  gridSize: number;
-  borderWidth: number;
-  cellHorizontalPadding: number;
-  sideBarWidth: number;
-}
-
-const useGridThemeParams = (): GridThemeParams => {
-  const { currentTheme, isDarkMode, spacing, fontSize, fontFamily, accentColor } = useTheme();
-  
-  const themeParams = useMemo<GridThemeParams>(() => {
-    // Calculate borderWidth once
-    const borderWidth = Math.max(1, Math.floor(spacing / 8));
-    
-    return {
-      // Basic theme parameters
-      baseTheme: currentTheme.theme,
-      isDarkMode,
-      fontSize,
-      fontFamily,
-      accentColor,
-      
-      // Fixed visual parameters
-      borderRadius: 2,
-      borders: true,
-      cellBorders: true,
-      headerBorders: true,
-      columnBorder: true,
-      headerColumnBorder: true,
-      
-      // Dynamic spacing parameter (kept separate for slider)
-      spacing,
-      
-      // Derived spacing values
-      rowHeight: spacing * 3,
-      headerHeight: spacing * 3,
-      listItemHeight: spacing * 2.5,
-      gridSize: Math.max(4, spacing / 2),
-      borderWidth,
-      cellHorizontalPadding: spacing,
-      sideBarWidth: 200 + spacing * 5,
-    };
-  }, [currentTheme.theme, isDarkMode, spacing, fontSize, fontFamily, accentColor]);
-  
-  return themeParams;
-};
-
 // Sample Data Provider
 const useSampleData = () => {
-  const [rowData, setRowData] = useState<RowData[]>([]);
+  const [rowData, setRowData] = useState<Position[]>([]);
   
-  React.useEffect(() => {
-    // Use local data instead of fetch to simplify debugging
-    setRowData([
-      { athlete: "Michael Phelps", age: 23, country: "United States", year: 2008, sport: "Swimming", gold: 8, silver: 0, bronze: 0, total: 8 },
-      { athlete: "Natalie Coughlin", age: 25, country: "United States", year: 2008, sport: "Swimming", gold: 1, silver: 2, bronze: 3, total: 6 },
-      { athlete: "Aleksey Nemov", age: 24, country: "Russia", year: 2000, sport: "Gymnastics", gold: 2, silver: 1, bronze: 3, total: 6 },
-      { athlete: "Alicia Coutts", age: 24, country: "Australia", year: 2012, sport: "Swimming", gold: 1, silver: 3, bronze: 1, total: 5 },
-      { athlete: "Missy Franklin", age: 17, country: "United States", year: 2012, sport: "Swimming", gold: 4, silver: 0, bronze: 1, total: 5 },
-      { athlete: "Ryan Lochte", age: 27, country: "United States", year: 2012, sport: "Swimming", gold: 2, silver: 2, bronze: 1, total: 5 },
-      { athlete: "Allison Schmitt", age: 22, country: "United States", year: 2012, sport: "Swimming", gold: 3, silver: 1, bronze: 1, total: 5 },
-      { athlete: "Natalie Coughlin", age: 21, country: "United States", year: 2004, sport: "Swimming", gold: 2, silver: 2, bronze: 1, total: 5 }
-    ]);
+  useEffect(() => {
+    // Generate initial data
+    setRowData(generatePositions(20));
   }, []);
   
   return { rowData };
@@ -270,55 +613,23 @@ const useSampleData = () => {
 
 // ----- Main Component and Types -----
 
-interface RowData {
-  athlete: string;
-  age: number;
-  country: string;
-  year: number;
-  sport: string;
-  gold: number;
-  silver: number;
-  bronze: number;
-  total: number;
-}
-
 export function DataTable() {
-  const { spacing, fontSize, fontFamily, accentColor, currentTheme } = useTheme();
+  const { isDarkMode } = useTheme();
   const { gridApiRef, saveGridState, restoreGridState } = useGridState();
   const themeParams = useGridThemeParams();
   const { rowData } = useSampleData();
   const columnTypes = useColumnTypes();
   const columnDefs = useColumnDefs();
 
-  // Handle theme changes
-  useEffect(() => {
-    const handleThemeChange = (event: CustomEvent) => {
-      const { isDarkMode: newDarkMode } = event.detail;
-      if (gridApiRef.current) {
-        // Update AG Grid theme by updating the container class
-        const gridElement = document.querySelector('.ag-theme-quartz, .ag-theme-quartz-dark');
-        if (gridElement) {
-          gridElement.classList.remove('ag-theme-quartz', 'ag-theme-quartz-dark');
-          gridElement.classList.add(newDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz');
-        }
-      }
-    };
-
-    // Listen for theme changes
-    document.addEventListener('theme-changed', handleThemeChange as EventListener);
-    
-    return () => {
-      document.removeEventListener('theme-changed', handleThemeChange as EventListener);
-    };
-  }, [gridApiRef]);
-
-  // Grid options
+  // Grid options with dynamic theme
   const gridOptions = useMemo<GridOptions>(() => ({
     suppressCellFocus: false,
     rowModelType: "clientSide",
-    suppressRowClickSelection: true,
-    rowSelection: "multiple",
-    enableRangeSelection: true,
+    rowSelection: {
+      mode: "multiRow",
+      enableClick: false
+    },
+    cellSelection: true,
     enableCellTextSelection: true,
     pagination: true,
     paginationAutoPageSize: true,
@@ -329,10 +640,11 @@ export function DataTable() {
       resizable: true,
       minWidth: 60,
     },
-    theme: currentTheme.theme,
-  }), [currentTheme.theme, spacing, fontSize, fontFamily, accentColor]);
+    theme: getCustomTheme(isDarkMode, themeParams),
+    className: isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz',
+  }), [isDarkMode, themeParams]);
 
-  const gridRef = useRef<AgGridReact<RowData>>(null);
+  const gridRef = useRef<AgGridReact<Position>>(null);
   
   // Container styles
   const containerStyle = useMemo(() => ({ 
@@ -340,127 +652,63 @@ export function DataTable() {
     height: "calc(100vh - 7rem)",
     display: "flex",
     flexDirection: "column" as const,
-    padding: "1rem",
-  }), []);
+    padding: "1.5rem",
+    gap: "1rem",
+    backgroundColor: isDarkMode ? 'rgba(24, 24, 24, 0.4)' : 'rgba(248, 248, 248, 0.4)',
+    backdropFilter: 'blur(8px)',
+    borderRadius: '12px',
+    boxShadow: isDarkMode 
+      ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' 
+      : '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+  }), [isDarkMode]);
 
   const gridStyle = useMemo(() => ({ 
     width: '100%',
     flex: 1,
-    borderRadius: '2px',
+    borderRadius: '8px',
     overflow: 'hidden',
-    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
-  }), []);
+    boxShadow: isDarkMode
+      ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+      : '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+  }), [isDarkMode]);
 
-  // Function to apply theme parameters to the grid (defined before it's used in onGridReady)
-  const applyGridTheme = useCallback(() => {
-    if (!gridApiRef.current) return;
-    
-    try {
-      const { 
-        baseTheme, fontSize, fontFamily, accentColor, 
-        borderRadius, headerColumnBorder, columnBorder,
-        rowHeight, headerHeight, gridSize,
-        cellHorizontalPadding, listItemHeight, sideBarWidth
-      } = themeParams;
-      
-      // Create a safe set of parameters that won't crash AG Grid
-      const safeParams = {
-        fontSize,
-        fontFamily,
-        accentColor,
-        borderRadius,
-        headerColumnBorder,
-        columnBorder,
-        rowHeight,
-        headerHeight,
-        gridSize,
-        cellHorizontalPadding,
-        listItemHeight,
-        sideBarWidth,
-        wrapperBorderRadius: borderRadius,
-        inputBorderRadius: borderRadius,
-        cardRadius: borderRadius,
-        modalRadius: borderRadius
-      };
-      
-      // Apply theme via API
-      const theme = baseTheme.withParams(safeParams);
-      gridApiRef.current.setGridOption('theme', theme);
-    } catch (error) {
-      console.error("Error in applyGridTheme:", error);
-    }
-  }, [themeParams]);
-
-  // Handle grid ready event (defined after applyGridTheme)
+  // Handle grid ready event
   const onGridReady = useCallback((params: GridReadyEvent) => {
     gridApiRef.current = params.api as ExtendedGridApi;
     
-    // Set the grid mode (light/dark) immediately
-    document.documentElement.dataset.agThemeMode = themeParams.isDarkMode ? 'dark' : 'light';
-    
-    // Apply initial theme with a small delay to ensure grid is ready
+    // Restore previous grid state and handle column sizing
     setTimeout(() => {
       try {
-        if (gridApiRef.current) {
-          applyGridTheme();
+        // Get saved column state
+        const savedColumnState = localStorage.getItem('ag-grid-column-state');
+        if (savedColumnState) {
+          const columnState = JSON.parse(savedColumnState);
+          // Apply saved column state
+          gridApiRef.current?.applyColumnState({
+            state: columnState,
+            applyOrder: true
+          });
+        } else {
+          // If no saved state, auto-size columns
+          gridApiRef.current?.sizeColumnsToFit();
         }
-      } catch (error) {
-        console.error("Error applying initial theme:", error);
-      }
-    }, 50);
-    
-    // Restore previous grid state
-    setTimeout(() => {
-      try {
+        
+        // Restore other grid state (filters, sorting)
         restoreGridState();
       } catch (error) {
         console.error("Error restoring grid state:", error);
+        // Fallback to auto-sizing if state restoration fails
+        gridApiRef.current?.sizeColumnsToFit();
       }
     }, 100);
-    
-    // Force the grid to calculate its dimensions correctly after initialization
-    setTimeout(() => {
-      try {
-        if (gridApiRef.current) {
-          gridApiRef.current.sizeColumnsToFit();
-        }
-      } catch (error) {
-        console.error("Error sizing columns:", error);
-      }
-    }, 200);
-  }, [themeParams.isDarkMode, restoreGridState, applyGridTheme]);
-
-  // Update theme when relevant parameters change
-  React.useEffect(() => {
-    try {
-      // Only run this after grid initialization
-      if (gridApiRef.current) {
-        applyGridTheme();
-      }
-    } catch (error) {
-      console.error("Error updating theme:", error);
-    }
-  }, [themeParams, applyGridTheme]);
-
-  // Register preset loaded listener
-  React.useEffect(() => {
-    const handlePresetLoaded = () => {
-      console.log('Preset loaded event received - restoring grid state');
-      restoreGridState();
-    };
-    
-    document.addEventListener('preset-loaded', handlePresetLoaded);
-    
-    return () => {
-      document.removeEventListener('preset-loaded', handlePresetLoaded);
-    };
   }, [restoreGridState]);
 
   return (
     <div style={containerStyle}>
       <DataToolbar onRefresh={() => {}} onAddNew={() => {}} />
-      <div style={gridStyle} className="mt-3">
-        <AgGridReact<RowData>
+      <div style={gridStyle}>
+        <AgGridReact<Position>
           {...gridOptions}
           ref={gridRef}
           rowData={rowData}

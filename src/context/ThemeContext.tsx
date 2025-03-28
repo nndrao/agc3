@@ -95,7 +95,35 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [isDarkMode, setIsDarkMode] = useState(DEFAULT_SETTINGS.isDarkMode);
   const [savedSettings, setSavedSettings] = useState<GridSettings[]>([]);
 
-  // Always use Quartz theme
+  // Function to apply theme to both app and ag-grid
+  const applyTheme = (darkMode: boolean) => {
+    // Update data-ag-theme-mode attribute for AG Grid
+    document.documentElement.dataset.agThemeMode = darkMode ? 'dark' : 'light';
+    
+    // Update Tailwind dark mode classes
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+    }
+
+    // Update ag-grid theme class
+    const gridElement = document.querySelector('.ag-theme-quartz, .ag-theme-quartz-dark');
+    if (gridElement) {
+      gridElement.classList.remove('ag-theme-quartz', 'ag-theme-quartz-dark');
+      gridElement.classList.add(darkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz');
+    }
+
+    // Dispatch theme change event
+    const event = new CustomEvent('theme-changed', { 
+      detail: { isDarkMode: darkMode } 
+    });
+    document.dispatchEvent(event);
+  };
+
+  // Initialize theme on mount
   useEffect(() => {
     // Force Quartz theme
     const quartzTheme = themes.find(t => t.id === 'quartz');
@@ -126,7 +154,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setAccentColor(savedAccentColor);
     }
     
-    // Load saved dark mode preference
+    // Load saved dark mode preference or use system preference
     const savedDarkMode = localStorage.getItem('dark-mode');
     const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const initialDarkMode = savedDarkMode 
@@ -134,18 +162,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       : prefersDarkMode;
     
     setIsDarkMode(initialDarkMode);
-    
-    // Set initial data-ag-theme-mode attribute
-    document.documentElement.dataset.agThemeMode = initialDarkMode ? 'dark' : 'light';
-    
-    // Set initial dark mode class for Tailwind
-    if (initialDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.body.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark');
-    }
+    applyTheme(initialDarkMode);
+
+    // Listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      if (localStorage.getItem('dark-mode') === null) {
+        setIsDarkMode(e.matches);
+        applyTheme(e.matches);
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
   }, []);
 
   const updateTheme = (theme: ThemeOption) => {
@@ -334,24 +363,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const newDarkMode = !isDarkMode;
     setIsDarkMode(newDarkMode);
     localStorage.setItem('dark-mode', newDarkMode.toString());
-    
-    // Update data-ag-theme-mode attribute for AG Grid
-    document.documentElement.dataset.agThemeMode = newDarkMode ? 'dark' : 'light';
-    
-    // Update Tailwind dark mode classes
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.body.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark');
-    }
-
-    // Dispatch a custom event to notify components of theme change
-    const event = new CustomEvent('theme-changed', { 
-      detail: { isDarkMode: newDarkMode } 
-    });
-    document.dispatchEvent(event);
+    applyTheme(newDarkMode);
   };
 
   return (
