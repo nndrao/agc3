@@ -34,6 +34,14 @@ export interface Position {
     baseCase: number;
     bestCase: number;
   };
+  todayChange?: number;
+  todayChangePercent?: number;
+  costBasis?: number;
+  allocation?: number;
+  sector?: string;
+  region?: string;
+  riskScore?: number;
+  lastUpdate?: string | Date;
 }
 
 const symbols = [
@@ -109,7 +117,11 @@ export function generatePositions(count: number = 10): Position[] {
   return Array.from({ length: count }, generatePosition);
 }
 
-export function formatPositionValue(value: number, type: 'currency' | 'percentage' | 'number' = 'number'): string {
+export function formatPositionValue(value: number | undefined | null, type: 'currency' | 'percentage' | 'number' = 'number'): string {
+  if (value === undefined || value === null) {
+    return '-';
+  }
+  
   if (type === 'currency') {
     return formatCurrency(value);
   } else if (type === 'percentage') {

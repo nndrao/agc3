@@ -2,7 +2,7 @@ import React from 'react'
 import './App.css'
 import { Header } from './components/Header'
 import { Footer } from './components/Footer'
-import { DataTable } from './components/DataTable'
+import { DataTable } from './components/DataTable/DataTable'
 import { LicenseManager } from 'ag-grid-enterprise'
 import { Toaster } from "./components/ui/toaster"
 
