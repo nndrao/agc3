@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { ModuleRegistry, themeQuartz, ColDef, ValueFormatterParams, GridReadyEvent } from "ag-grid-community";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { ModuleRegistry, themeQuartz, ColDef, ValueFormatterParams, GridReadyEvent, GridApi } from "ag-grid-community";
 import { AllEnterpriseModule } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
 import { useTheme } from "../../context/ThemeContext";
@@ -10,67 +10,78 @@ import type { Position } from "../../lib/dummyData";
 // Register AG Grid Enterprise modules
 ModuleRegistry.registerModules([AllEnterpriseModule]);
 
-// Create custom theme based on the provided example
-const theme = themeQuartz
-  .withParams(
-    {
-      accentColor: "#8AAAA7",
-      backgroundColor: "#F7F7F7",
-      borderColor: "#23202029",
-      browserColorScheme: "light",
-      buttonBorderRadius: 2,
-      cellTextColor: "#000000",
-      checkboxBorderRadius: 2,
-      columnBorder: true,
-      fontFamily: {
-        googleFont: "Inter",
-      },
-      fontSize: 14,
-      headerBackgroundColor: "#EFEFEFD6",
-      headerFontFamily: {
-        googleFont: "Inter",
-      },
-      headerFontSize: 14,
-      headerFontWeight: 500,
-      iconButtonBorderRadius: 1,
-      iconSize: 12,
-      inputBorderRadius: 2,
-      oddRowBackgroundColor: "#EEF1F1E8",
-      spacing: 6,
-      wrapperBorderRadius: 2,
-    },
-    "light"
-  )
-  .withParams(
-    {
-      accentColor: "#8AAAA7",
-      backgroundColor: "#1f2836",
-      borderRadius: 2,
-      checkboxBorderRadius: 2,
-      columnBorder: true,
-      fontFamily: {
-        googleFont: "Inter",
-      },
-      browserColorScheme: "dark",
-      chromeBackgroundColor: {
-        ref: "foregroundColor",
-        mix: 0.07,
-        onto: "backgroundColor",
-      },
-      fontSize: 14,
-      foregroundColor: "#FFF",
-      headerFontFamily: {
-        googleFont: "Inter",
-      },
-      headerFontSize: 14,
-      iconSize: 12,
-      inputBorderRadius: 2,
-      oddRowBackgroundColor: "#2A2E35",
-      spacing: 6,
-      wrapperBorderRadius: 2,
-    },
-    "dark"
-  );
+// Extend GridApi type to include missing methods
+interface ExtendedGridApi extends GridApi {
+  setRowData: (data: Position[]) => void;
+}
+
+// Create dynamic theme that responds to ThemeContext changes
+const useDynamicTheme = () => {
+  const { fontSize, spacing, accentColor, isDarkMode } = useTheme();
+  
+  return useMemo(() => {
+    return themeQuartz
+      .withParams(
+        {
+          accentColor: accentColor,
+          backgroundColor: "#F7F7F7",
+          borderColor: "#23202029",
+          browserColorScheme: "light",
+          buttonBorderRadius: 2,
+          cellTextColor: "#000000",
+          checkboxBorderRadius: 2,
+          columnBorder: true,
+          fontFamily: {
+            googleFont: "Inter",
+          },
+          fontSize: fontSize, // Dynamic fontSize from sliders
+          headerBackgroundColor: "#EFEFEFD6",
+          headerFontFamily: {
+            googleFont: "Inter",
+          },
+          headerFontSize: fontSize, // Match header fontSize to body fontSize
+          headerFontWeight: 500,
+          iconButtonBorderRadius: 1,
+          iconSize: Math.max(12, Math.floor(fontSize * 0.85)),
+          inputBorderRadius: 2,
+          oddRowBackgroundColor: "#EEF1F1E8",
+          spacing: spacing, // Dynamic spacing from sliders
+          wrapperBorderRadius: 2,
+        },
+        "light"
+      )
+      .withParams(
+        {
+          accentColor: accentColor,
+          backgroundColor: "#1f2836",
+          borderRadius: 2,
+          checkboxBorderRadius: 2,
+          columnBorder: true,
+          fontFamily: {
+            googleFont: "Inter",
+          },
+          browserColorScheme: "dark",
+          chromeBackgroundColor: {
+            ref: "foregroundColor",
+            mix: 0.07,
+            onto: "backgroundColor",
+          },
+          fontSize: fontSize, // Dynamic fontSize from sliders
+          foregroundColor: "#FFF",
+          headerFontFamily: {
+            googleFont: "Inter",
+          },
+          headerFontSize: fontSize, // Match header fontSize to body fontSize
+          iconSize: Math.max(12, Math.floor(fontSize * 0.85)),
+          inputBorderRadius: 2,
+          oddRowBackgroundColor: "#2A2E35",
+          spacing: spacing, // Dynamic spacing from sliders
+          wrapperBorderRadius: 2,
+        },
+        "dark"
+      );
+  }, [fontSize, spacing, accentColor, isDarkMode]);
+};
 
 // Position-specific column definitions
 const columnDefs: ColDef<Position>[] = [
@@ -156,15 +167,18 @@ const defaultColDef = {
 };
 
 export function DataTable() {
-  const { isDarkMode, fontSize, fontFamily } = useTheme();
-  const [gridApi, setGridApi] = useState<any>(null);
+  const { isDarkMode, spacing } = useTheme();
+  const [gridApi, setGridApi] = useState<ExtendedGridApi | null>(null);
+  
+  // Get the dynamic theme
+  const theme = useDynamicTheme();
   
   // Get sample data
   const rowData = generatePositions(100);
   
   // Handle grid ready event
   const onGridReady = useCallback((params: GridReadyEvent) => {
-    setGridApi(params.api);
+    setGridApi(params.api as ExtendedGridApi);
     
     // Apply initial sizing
     params.api.sizeColumnsToFit();
@@ -177,35 +191,46 @@ export function DataTable() {
     
     // Listen for theme changes
     const themeChangeHandler = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {};
+      
       setTimeout(() => {
         try {
-          // Extract details from the event
-          const detail = (event as CustomEvent).detail || {};
-          
-          // Apply row height if provided
+          // Apply row and header heights if provided
           if (detail.rowHeight) {
             params.api.resetRowHeights();
           }
           
-          // Full refresh sequence
+          if (detail.headerHeight) {
+            // Header height refresh is handled by refreshHeader
+          }
+          
+          // Apply full refresh sequence
           params.api.refreshCells({ force: true });
           params.api.refreshHeader();
-          params.api.sizeColumnsToFit();
           
-          // If forceRedraw is true, do a more complete refresh
-          if (detail.forceRedraw) {
-            // Allow time for CSS to apply before redrawing rows
+          // If font size changed or forceRedraw is true, do a more comprehensive redraw
+          if (detail.fontSize || detail.spacing || detail.forceRedraw) {
+            console.log("Theme change:", detail);
+            
+            // Apply a full grid redraw with increased timeouts to ensure correct rendering
             setTimeout(() => {
+              params.api.resetRowHeights(); 
               params.api.redrawRows();
               params.api.sizeColumnsToFit();
+              
+              // Add extra redraw for stubborn browsers 
+              setTimeout(() => {
+                params.api.refreshCells({ force: true });
+              }, 50);
             }, 50);
+          } else {
+            // Standard fit
+            params.api.sizeColumnsToFit();
           }
         } catch (error) {
           console.error('Error applying theme changes:', error);
-          // Fallback to a simpler refresh if something goes wrong
-          params.api.redrawRows();
         }
-      }, 50);
+      }, 20);
     };
     document.addEventListener('theme-changed', themeChangeHandler);
     
@@ -220,57 +245,6 @@ export function DataTable() {
   useEffect(() => {
     setDarkMode(isDarkMode);
   }, [isDarkMode]);
-  
-  // Apply custom font styling
-  useEffect(() => {
-    const styleElement = document.createElement('style');
-    styleElement.textContent = `
-      .ag-theme-quartz,
-      .ag-theme-quartz-dark {
-        --ag-font-family: ${fontFamily};
-        font-family: ${fontFamily};
-        --ag-font-size: ${fontSize}px;
-        font-size: ${fontSize}px;
-      }
-      
-      .ag-theme-quartz .ag-header-cell,
-      .ag-theme-quartz-dark .ag-header-cell {
-        font-family: ${fontFamily};
-        font-size: ${fontSize}px;
-      }
-      
-      .ag-theme-quartz .ag-cell,
-      .ag-theme-quartz-dark .ag-cell {
-        font-family: ${fontFamily};
-        font-size: ${fontSize}px;
-      }
-      
-      .ag-right-aligned-cell {
-        text-align: right;
-      }
-      
-      .ag-right-aligned-header {
-        text-align: right;
-      }
-      
-      .ag-cell-positive {
-        color: #00FFBA;
-        background-color: rgba(0, 255, 186, 0.1);
-      }
-      
-      .ag-cell-negative {
-        color: #FF3B3B;
-        background-color: rgba(255, 59, 59, 0.1);
-      }
-    `;
-    document.head.appendChild(styleElement);
-    
-    return () => {
-      if (styleElement.parentNode) {
-        styleElement.parentNode.removeChild(styleElement);
-      }
-    };
-  }, [fontSize, fontFamily]);
   
   // Function to set dark mode
   function setDarkMode(enabled: boolean) {
@@ -303,6 +277,8 @@ export function DataTable() {
           rowData={rowData}
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
+          rowHeight={spacing * 3} // Dynamic row height based on spacing
+          headerHeight={spacing * 3} // Dynamic header height based on spacing
           sideBar
           rowSelection="multiple"
           enableCharts

@@ -17,7 +17,6 @@ export function DataToolbar({
     updateSpacing,
     fontSize,
     updateFontSize,
-    fontFamily,
     isDarkMode
   } = useTheme();
 
@@ -145,6 +144,44 @@ export function DataToolbar({
       .settings-menu [role="menu"] {
         z-index: 1000;
       }
+      
+      /* Custom styling for cell alignment and colors */
+      .ag-right-aligned-cell {
+        text-align: right;
+      }
+      
+      .ag-right-aligned-header {
+        text-align: right;
+      }
+      
+      .ag-cell-positive {
+        color: #00FFBA;
+        background-color: rgba(0, 255, 186, 0.1);
+      }
+      
+      .ag-cell-negative {
+        color: #FF3B3B;
+        background-color: rgba(255, 59, 59, 0.1);
+      }
+      
+      /* Force font size on cells */
+      .ag-theme-quartz,
+      .ag-theme-quartz-dark {
+        --ag-font-size: ${fontSize}px !important;
+        font-size: ${fontSize}px !important;
+      }
+      
+      .ag-theme-quartz .ag-header-cell,
+      .ag-theme-quartz-dark .ag-header-cell,
+      .ag-theme-quartz .ag-header-group-cell,
+      .ag-theme-quartz-dark .ag-header-group-cell {
+        font-size: ${fontSize}px !important;
+      }
+      
+      .ag-theme-quartz .ag-cell,
+      .ag-theme-quartz-dark .ag-cell {
+        font-size: ${fontSize}px !important;
+      }
     `;
     
     return () => {
@@ -152,58 +189,9 @@ export function DataToolbar({
         styleElement.parentNode.removeChild(styleElement);
       }
     };
-  }, [isDarkMode]);
+  }, [isDarkMode, fontSize]);
 
-  // Apply selected font to AG Grid
-  useEffect(() => {
-    const rootEl = document.documentElement;
-    if (rootEl) {
-      rootEl.style.setProperty('--ag-font-family', fontFamily);
-      
-      // Also set a data attribute that can be used for styling
-      rootEl.setAttribute('data-font', fontFamily.split(',')[0].trim());
-      
-      // Apply font to custom elements (like inputs, etc)
-      const styleId = 'ag-grid-font-styles';
-      let styleElement = document.getElementById(styleId) as HTMLStyleElement;
-      
-      if (!styleElement) {
-        styleElement = document.createElement('style');
-        styleElement.id = styleId;
-        document.head.appendChild(styleElement);
-      }
-      
-      styleElement.textContent = `
-        .ag-theme-quartz,
-        .ag-theme-quartz-dark {
-          --ag-font-family: ${fontFamily};
-          font-family: ${fontFamily};
-          --ag-font-size: ${fontSize}px;
-          font-size: ${fontSize}px;
-        }
-        
-        .ag-theme-quartz .ag-header-cell,
-        .ag-theme-quartz-dark .ag-header-cell {
-          font-family: ${fontFamily};
-          font-size: ${fontSize}px;
-        }
-        
-        .ag-theme-quartz .ag-cell,
-        .ag-theme-quartz-dark .ag-cell {
-          font-family: ${fontFamily};
-          font-size: ${fontSize}px;
-        }
-        
-        .ag-theme-quartz input,
-        .ag-theme-quartz-dark input {
-          font-family: ${fontFamily};
-          font-size: ${fontSize}px;
-        }
-      `;
-    }
-  }, [fontFamily, fontSize]);
-
-  // Apply spacing styles to AG Grid
+  // Add CSS for spacing variables
   useEffect(() => {
     const styleId = 'ag-grid-spacing-styles';
     let styleElement = document.getElementById(styleId) as HTMLStyleElement;
@@ -214,7 +202,7 @@ export function DataToolbar({
       document.head.appendChild(styleElement);
     }
     
-    // Apply spacing to all relevant AG Grid elements with !important to override defaults
+    // Force spacing variables with !important
     styleElement.textContent = `
       .ag-theme-quartz,
       .ag-theme-quartz-dark {
@@ -222,43 +210,17 @@ export function DataToolbar({
         --ag-cell-horizontal-padding: ${spacing}px !important;
         --ag-row-height: ${spacing * 3}px !important;
         --ag-header-height: ${spacing * 3}px !important;
-        --ag-list-item-height: ${spacing * 2.5}px !important;
-        --ag-widget-horizontal-spacing: ${spacing}px !important;
-        --ag-widget-vertical-spacing: ${spacing}px !important;
-      }
-      
-      /* Force row height to respect our spacing */
-      .ag-theme-quartz .ag-row,
-      .ag-theme-quartz-dark .ag-row {
-        height: ${spacing * 3}px !important;
-      }
-      
-      /* Force header height to respect our spacing */
-      .ag-theme-quartz .ag-header-row,
-      .ag-theme-quartz-dark .ag-header-row {
-        height: ${spacing * 3}px !important;
-      }
-      
-      /* Ensure proper cell padding */
-      .ag-theme-quartz .ag-cell,
-      .ag-theme-quartz-dark .ag-cell,
-      .ag-theme-quartz .ag-header-cell,
-      .ag-theme-quartz-dark .ag-header-cell {
-        padding-left: ${spacing}px !important;
-        padding-right: ${spacing}px !important;
       }
     `;
     
-    // Force full grid redraw when spacing changes
-    document.dispatchEvent(new CustomEvent('theme-changed', { 
-      detail: { 
-        spacing,
-        rowHeight: spacing * 3,
-        headerHeight: spacing * 3,
-        forceRedraw: true 
-      } 
-    }));
+    return () => {
+      if (styleElement && styleElement.parentNode) {
+        styleElement.parentNode.removeChild(styleElement);
+      }
+    };
   }, [spacing]);
+
+  // Remove the font and spacing application useEffects since they're now controlled by theme directly
 
   return (
     <div style={toolbarStyle} className="flex flex-col">
@@ -291,7 +253,7 @@ export function DataToolbar({
               <input
                 type="range"
                 className="ag-toolbar-slider w-24"
-                min="12"
+                min="6"
                 max="18"
                 step="1"
                 value={fontSize}
@@ -301,8 +263,8 @@ export function DataToolbar({
                   updateFontSize(newSize);
                   
                   // Dispatch event to notify grid of theme changes
-                  document.dispatchEvent(new CustomEvent('theme-changed', { 
-                    detail: { fontSize: newSize } 
+                  document.dispatchEvent(new CustomEvent('theme-changed', {
+                    detail: { fontSize: newSize, forceRedraw: true }
                   }));
                 }}
               />
@@ -327,7 +289,15 @@ export function DataToolbar({
                   console.log('Spacing changed:', newSpacing);
                   updateSpacing(newSpacing);
                   
-                  // Event dispatch moved to useEffect to avoid duplicate events
+                  // Dispatch event to notify grid of theme changes
+                  document.dispatchEvent(new CustomEvent('theme-changed', {
+                    detail: { 
+                      spacing: newSpacing,
+                      rowHeight: newSpacing * 3,
+                      headerHeight: newSpacing * 3,
+                      forceRedraw: true
+                    }
+                  }));
                 }}
               />
               <span className="text-xs" style={valueStyle}>{spacing}px</span>
